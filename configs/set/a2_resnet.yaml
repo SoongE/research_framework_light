@@ -1,0 +1,34 @@
+defaults:
+  - base_set
+
+gpus: [ 0,1,2,3 ]
+name: a2_resnet50
+
+train:
+  epochs: 300
+  batch_size: 256
+  num_workers: 16
+  bce_loss: True
+  target_thresh: 0.2
+
+  lr:
+    lr: 3.5e-3
+    weight_decay: 0.02
+    warmup_t: 5
+    warmup_lr: 1e-4
+
+  augmentation:
+    mixup: 0.1
+    cumix: 1.0
+    crop_pct: 0.95
+    aa: rand-m7-mstd0.5-inc1
+    aug_repeat: 3
+    remode: pixel
+    smoothing: 0.0
+
+  optimizer:
+    opt: lamb
+
+model:
+  model_name: resnet50
+  drop_path_rate: 0.05

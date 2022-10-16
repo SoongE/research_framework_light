@@ -1,0 +1,28 @@
+defaults:
+  - lr: base_lr
+  - optimizer: base_optim
+  - augmentation: base_augmentation
+
+epochs: 100
+batch_size: 256
+num_workers: 8
+seed: 42
+
+bce_loss: False
+bce_target_thresh:
+
+model_ema: False
+model-ema_force_cpu: False
+model_ema_decay: 0.9998
+
+sync_bn: True
+dist_bn:  # [ broadcast | reduce ]
+split_bn: False
+ddp_bb: True
+
+double_valid: False
+channels_last: True
+amp: True
+resume: False
+resume_opt: True
+save_max_history: 5

@@ -1,3 +1,11 @@
+#
+.idea/
+wandb/
+runs/
+*.pt
+*.pth
+*.pth.tar
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

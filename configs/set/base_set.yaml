@@ -1,0 +1,15 @@
+defaults:
+  - _self_
+  - train: base_train
+  - dataset: imagenet
+  - info: info
+  - model: base_model
+
+name: experiment0
+
+wandb: True
+distributed: False
+local_rank: 0
+world_size: 1
+port: 3456
+gpus: [ 0 ]

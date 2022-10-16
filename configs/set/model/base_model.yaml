@@ -1,0 +1,13 @@
+model_name: simple_net
+pretrained: False
+
+bn_momentum:
+bn_eps:
+scriptable: False
+
+drop_rate: 0
+drop_path_rate:
+drop_block_rate:
+
+gp:
+features_only: False
