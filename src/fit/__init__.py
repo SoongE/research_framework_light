@@ -6,14 +6,13 @@ from timm.utils import dispatch_clip_grad, distribute_bn, update_summary
 from torch.cuda.amp import autocast
 from torchmetrics import MeanMetric, Accuracy
 from torchmetrics.functional import accuracy
-from tqdm import tqdm
 
 
 class Fit:
-    def __init__(self, cfg, scaler, device, local_rank, start_epoch, num_epochs, model, criterion, optimizer, model_ema,
+    def __init__(self, cfg, scaler, device, start_epoch, num_epochs, model, criterion, optimizer, model_ema,
                  scheduler, saver, loader=None):
         self.device = device
-        self.local_rank = local_rank
+        self.local_rank = cfg.local_rank
         self.world_size = cfg.world_size
 
         self.distributed = cfg.distributed
@@ -25,6 +24,7 @@ class Fit:
         self.wandb = cfg.wandb
         self.start_epoch = start_epoch
         self.num_epochs = num_epochs
+        self.logging_interval = 50
 
         self.model = model
         self.train_criterion = criterion[0]
@@ -69,7 +69,9 @@ class Fit:
                 best_metric, best_epoch = self.saver.save_checkpoint(epoch, metric=eval_metrics['Top1'])
                 eval_metrics.update({'Best_Top1': best_metric})
                 update_summary(epoch, train_metrics, eval_metrics, 'summary.csv', log_wandb=self.wandb)
-        logging.info(f'*** Best Top1: {best_metric} {best_epoch} ***')
+
+        if self._master_node():
+            logging.info(f'*** Best Top1: {best_metric} {best_epoch} ***')
 
     def iterate(self, model, data, criterion):
         x, y = map(lambda x: x.to(self.device), data)
@@ -83,12 +85,12 @@ class Fit:
 
     def train(self, epoch):
         self._reset_metric()
-        num_updates = epoch * len(self.train_loader)
-        pbar = self._set_pbar(self.train_loader)
+        total = len(self.train_loader)
+        num_updates = epoch * total
 
         self.model.train()
         self.optimizer.zero_grad()
-        for i, data in pbar:
+        for i, data in enumerate(self.train_loader):
             loss, prob, target = self.iterate(self.model, data, self.train_criterion)
             loss /= self.grad_accumulation
 
@@ -96,8 +98,8 @@ class Fit:
 
             self.losses.update(loss)
             computed_losses = self.losses.compute()
-            if self._master_node():
-                pbar.set_description(f'[Train#{epoch:>3}] Loss:{computed_losses:.6f}')
+            if self._master_node() and i % self.logging_interval == 0:
+                logging.info(f'Train {epoch:>3}: [{i:>4d}/{total}]  Loss:{computed_losses:.6f}')
 
             torch.cuda.synchronize()
             num_updates += 1
@@ -113,17 +115,17 @@ class Fit:
         model = self.model_ema if ema else self.model
         log_prefix = ' EMA ' if ema else ' Val '
         self._reset_metric()
-        pbar = self._set_pbar(self.val_loader)
+        total = len(self.val_loader)
 
         model.eval()
-        for i, data in pbar:
+        for i, data in enumerate(self.val_loader):
             loss, prob, target = self.iterate(model, data, self.val_criterion)
             loss /= self.grad_accumulation
             self._update_metric(loss, prob, target)
 
             metrics = self._metrics()
-            if self._master_node():
-                pbar.set_description(self._print(metrics, epoch, log_prefix))
+            if self._master_node() and i % self.logging_interval == 0:
+                logging.info(self._print(metrics, epoch, log_prefix, i, total))
 
         return self._metrics()
 
@@ -131,19 +133,19 @@ class Fit:
     def test(self, ema, test_loader):
         self._reset_metric()
         accuracies_list = list()
-        pbar = self._set_pbar(test_loader)
+        total = len(test_loader)
 
         model = self.model_ema if ema else self.model
 
         model.eval()
-        for i, data in pbar:
+        for i, data in enumerate(test_loader):
             loss, prob, target = self.iterate(model, data, self.val_criterion)
             self._update_metric(loss, prob, target)
             accuracies_list.append(accuracy(prob, target))
 
             metrics = self._metrics()
-            if self._master_node():
-                pbar.set_description(self._print(metrics, 0, 'Test'))
+            if self._master_node() and i % self.logging_interval == 0:
+                logging.info(self._print(metrics, 0, 'Test', i, total))
 
         return accuracies_list, self._metrics()
 
@@ -170,13 +172,6 @@ class Fit:
                 dispatch_clip_grad(self.model.parameters(), self.clip_grad, mode=self.clip_mode)
             self.optimizer.step()
 
-    def _set_pbar(self, loader):
-        if self._master_node():
-            pbar = tqdm(enumerate(loader), total=len(loader), dynamic_ncols=True)
-        else:
-            pbar = enumerate(loader)
-        return pbar
-
     def _update_metric(self, loss, prob, target):
         self.losses.update(loss.item() / prob.size(0))
         self.top1.update(prob, target)
@@ -194,8 +189,8 @@ class Fit:
             'Top5': self.top5.compute() * 100,
         }
 
-    def _print(self, metrics, epoch, mode):
-        log = f'[{mode}#{epoch:>3}] '
+    def _print(self, metrics, epoch, iter, max_iter, mode):
+        log = f'{mode} {epoch:>3}: [{iter:>4d}/{max_iter}]  '
         for k, v in metrics.items():
             log += f'{k}:{v:.6f} | '
         return log[:-3]

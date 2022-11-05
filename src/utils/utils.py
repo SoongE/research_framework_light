@@ -15,7 +15,7 @@ def print_pass(*args):
     pass
 
 
-def model_tune(model, scaler, local_rank, device, cfg):
+def model_tune(model, scaler, device, cfg):
     # enable split bn (separate bn stats per batch-portion)
     if cfg.train.split_bn:
         assert cfg.train.argumentation.aug_splits > 1 or cfg.train.argumentation.resplit
@@ -38,7 +38,7 @@ def model_tune(model, scaler, local_rank, device, cfg):
     optimizer = create_optimizer_v2(model, **optimizer_kwargs(cfg=EasyDict({**cfg.train.lr, **cfg.train.optimizer})))
 
     resume_epochs = resume_checkpoint(model, optimizer, scaler, cfg.train.resume, cfg.train.resume_opt,
-                                      local_rank) if cfg.train.resume else None
+                                      cfg.local_rank) if cfg.train.resume else None
 
     # Important to create EMA model after cuda(), DP wrapper, and AMP but before SyncBN and DDP wrapper
     model_ema = ModelEmaV2(model, decay=cfg.train.model_ema_decay,

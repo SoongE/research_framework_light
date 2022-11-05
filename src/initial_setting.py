@@ -15,21 +15,23 @@ def init_logger(cfg):
         return logger
 
 
-def init_distributed(distributed, ngpus_per_node, local_rank, port, cfg):
-    cfg.local_rank = local_rank
-    if not distributed:
+def init_distributed(cfg):
+    cfg.world_size = int(os.environ['WORLD_SIZE'])
+    cfg.distributed = cfg.world_size > 1
+
+    if not cfg.distributed:
         return
 
-    init_process_group(
+    torch.distributed.init_process_group(
         backend='nccl',
-        init_method=f'tcp://127.0.0.1:{port}',
-        world_size=ngpus_per_node,
-        rank=local_rank)
-    if local_rank != 0:
-        builtins.print = print_pass
-    torch.cuda.set_device(local_rank)
+        init_method='env://',
+    )
+
+    cfg.local_rank = int(os.environ['LOCAL_RANK'])
+    torch.cuda.set_device(cfg.local_rank)
     torch.cuda.empty_cache()
-    cfg.world_size = torch.distributed.get_world_size()
+    if cfg.local_rank != 0:
+        builtins.print = print_pass
 
 
 def cuda_setting(gpus):
