@@ -15,8 +15,8 @@ model_ema: False
 model-ema_force_cpu: False
 model_ema_decay: 0.9998
 
-sync_bn: True
-dist_bn:  # [ broadcast | reduce ]
+sync_bn: False
+dist_bn: reduce # [ broadcast | reduce ]
 split_bn: False
 ddp_bb: True
 
