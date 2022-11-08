@@ -99,7 +99,7 @@ class Fit:
             self.losses.update(loss)
             computed_losses = self.losses.compute()
             if self._master_node() and i % self.logging_interval == 0:
-                logging.info(f'Train {epoch:>3}: [{i:>4d}/{total}]  Loss:{computed_losses:.6f}')
+                logging.info(f'Train {epoch:>3}: [{i:>4}/{total}]  Loss:{computed_losses:.6f}')
 
             torch.cuda.synchronize()
             num_updates += 1
@@ -125,7 +125,7 @@ class Fit:
 
             metrics = self._metrics()
             if self._master_node() and i % self.logging_interval == 0:
-                logging.info(self._print(metrics, epoch, log_prefix, i, total))
+                logging.info(self._print(metrics, epoch, i, total, log_prefix))
 
         return self._metrics()
 
@@ -145,7 +145,7 @@ class Fit:
 
             metrics = self._metrics()
             if self._master_node() and i % self.logging_interval == 0:
-                logging.info(self._print(metrics, 0, 'Test', i, total))
+                logging.info(self._print(metrics, 0, i, total, 'Test'))
 
         return accuracies_list, self._metrics()
 
@@ -189,8 +189,8 @@ class Fit:
             'Top5': self.top5.compute() * 100,
         }
 
-    def _print(self, metrics, epoch, iter, max_iter, mode):
-        log = f'{mode} {epoch:>3}: [{iter:>4d}/{max_iter}]  '
+    def _print(self, metrics, epoch, i, max_iter, mode):
+        log = f'{mode} {epoch:>3}: [{i:>4d}/{max_iter}]  '
         for k, v in metrics.items():
             log += f'{k}:{v:.6f} | '
         return log[:-3]
