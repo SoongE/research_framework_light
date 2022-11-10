@@ -10,6 +10,7 @@ from src.fit import Fit
 from src.initial_setting import init_seed, init_distributed, init_logger, cuda_setting
 from src.utils import model_tune, create_scheduler_v2, create_criterion, NativeScalerWithGradUpdate
 from src.utils.benchmark import benchmark_model
+from src.models import *
 
 
 @hydra.main(config_path="configs", config_name="config")
