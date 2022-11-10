@@ -1,6 +1,7 @@
 import logging
 
 import torch
+import wandb
 from easydict import EasyDict
 from timm.loss import BinaryCrossEntropy, SoftTargetCrossEntropy, LabelSmoothingCrossEntropy
 from timm.models import convert_splitbn_model, resume_checkpoint as timm_resume_checkpoint, load_checkpoint
@@ -129,3 +130,11 @@ def reconstruct_cfg(cfg):
         for k, v in cfg.train.model.items():
             cfg.model[k] = v
         cfg.train.model = {}
+
+
+def logging_benchmark_result_to_wandb(benchmark_result, exp_name):
+    columns = ['Name']
+    columns.extend(list(benchmark_result.keys()))
+    data = [exp_name]
+    data.extend(list(benchmark_result.values()))
+    wandb.log({'benchmark': wandb.Table(columns=columns, data=[data])})

@@ -70,7 +70,7 @@ def resolve_precision(precision: str):
 def profile_deepspeed(model, input_size=(3, 224, 224), batch_size=1, detailed=False):
     _, macs, _ = get_model_profile(
         model=model,
-        input_res=(batch_size,) + input_size,  # input shape/resolution
+        input_shape=(batch_size,) + input_size,  # input shape/resolution
         print_profile=detailed,  # prints the model graph with the measured profile attached to each module
         detailed=detailed,  # print the detailed profile
         warm_up=10,  # the number of warm-ups before measuring the time of each module
@@ -132,7 +132,7 @@ class BenchmarkRunner:
             device=self.device,
             dtype=self.model_dtype,
             memory_format=torch.channels_last if self.channels_last else None)
-        self.num_classes = self.model.num_classes
+        self.num_classes = kwargs.pop('num_classes')
         self.param_count = count_params(self.model)
 
         data_config = resolve_data_config(kwargs, model=self.model, use_test_size=not use_train_size)
@@ -306,9 +306,9 @@ def _try_run(
 def benchmark(args, model=None):
     if args.amp:
         args.precision = 'amp'
-    print(f'Benchmarking in {args.precision} precision. '
-          f'{"NHWC" if args.channels_last else "NCHW"} layout. '
-          f'torchscript {"enabled" if args.torchscript else "disabled"}')
+    # print(f'Benchmarking in {args.precision} precision. '
+    #       f'{"NHWC" if args.channels_last else "NCHW"} layout. '
+    #       f'torchscript {"enabled" if args.torchscript else "disabled"}')
 
     bench_kwargs = OmegaConf.to_container(args).copy()
     bench_kwargs.pop('amp')
@@ -340,7 +340,7 @@ def benchmark_model(cfg, model):
     result = benchmark(cfg, model)
     result.pop('batch_size')
     result.pop('img_size')
-    print(f'Benchmark result\n{json.dumps(results, indent=4)}')
+    print(f'Benchmark result\n{json.dumps(result, indent=4)}')
     return result
 
 
