@@ -8,8 +8,7 @@ from src.data.data_loader_v2 import load_dataloader_v2
 from src.fit import Fit
 from src.initial_setting import init_seed, init_distributed, init_logger, cuda_setting
 from src.utils import model_tune, create_scheduler_v2, create_criterion, NativeScalerWithGradUpdate, \
-    logging_benchmark_result_to_wandb
-from src.utils.benchmark import benchmark_model
+    logging_benchmark_result_to_wandb, benchmark_model
 from src.models import *
 
 
