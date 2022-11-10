@@ -16,7 +16,10 @@ def init_logger(cfg):
 
 
 def init_distributed(cfg):
-    cfg.world_size = int(os.environ['WORLD_SIZE'])
+    try:
+        cfg.world_size = int(os.environ['WORLD_SIZE'])
+    except:
+        cfg.world_size = 1
     cfg.distributed = cfg.world_size > 1
 
     if not cfg.distributed:
