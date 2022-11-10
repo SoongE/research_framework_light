@@ -36,7 +36,8 @@ def main(cfg: DictConfig) -> None:
                             max_history=cfg.train.save_max_history)
 
     benchmark_result = benchmark_model(cfg.benchmark, model)
-    logging_benchmark_result_to_wandb(benchmark_result, cfg.name)
+    if cfg.local_rank == 0:
+        logging_benchmark_result_to_wandb(benchmark_result, cfg.name)
 
     fit = Fit(cfg, scaler, device, start_epoch, num_epochs, model, criterions, optimizer, model_ema, scheduler, saver,
               loaders)
