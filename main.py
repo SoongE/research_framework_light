@@ -19,8 +19,7 @@ def main(cfg: DictConfig) -> None:
     init_distributed(cfg)
     init_seed(cfg.train.seed + cfg.local_rank)
 
-    # device = torch.device(f'cuda:{cfg.local_rank}') if torch.cuda.is_available() else torch.device('cpu')
-    device = torch.device('cpu')
+    device = torch.device(f'cuda:{cfg.local_rank}') if torch.cuda.is_available() else torch.device('cpu')
 
     init_logger(cfg)
 
