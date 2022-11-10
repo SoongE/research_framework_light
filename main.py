@@ -1,5 +1,6 @@
 import hydra
 import torch
+import wandb
 from omegaconf import DictConfig
 from timm import create_model
 from timm.utils import CheckpointSaver
@@ -8,7 +9,8 @@ from src.data.data_loader_v2 import load_dataloader_v2
 from src.fit import Fit
 from src.initial_setting import init_seed, init_distributed, init_logger, cuda_setting
 from src.utils import model_tune, create_scheduler_v2, create_criterion, NativeScalerWithGradUpdate
-from src.models import *
+from src.utils.benchmark import benchmark_model
+
 
 @hydra.main(config_path="configs", config_name="config")
 def main(cfg: DictConfig) -> None:
@@ -32,6 +34,9 @@ def main(cfg: DictConfig) -> None:
 
     saver = CheckpointSaver(model=model, optimizer=optimizer, args=cfg, model_ema=model_ema, amp_scaler=scaler,
                             max_history=cfg.train.save_max_history)
+
+    benchmark_result = benchmark_model(cfg.benchmark, model)
+    wandb.log(benchmark_result)
 
     fit = Fit(cfg, scaler, device, start_epoch, num_epochs, model, criterions, optimizer, model_ema, scheduler, saver,
               loaders)
