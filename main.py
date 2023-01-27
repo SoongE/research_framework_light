@@ -4,7 +4,7 @@ from omegaconf import DictConfig
 from timm import create_model
 from timm.utils import CheckpointSaver
 
-from src.data.data_loader_v2 import load_dataloader_v2
+from src.data import get_dataloader
 from src.fit import Fit
 from src.initial_setting import init_seed, init_distributed, init_logger, cuda_setting
 from src.utils import model_tune, create_scheduler_v2, create_criterion, NativeScalerWithGradUpdate, \
@@ -12,9 +12,8 @@ from src.utils import model_tune, create_scheduler_v2, create_criterion, NativeS
 from src.models import *
 
 
-@hydra.main(config_path="configs", config_name="config")
+@hydra.main(config_path="configs", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
-    cfg = cfg.set
     cuda_setting(cfg.gpus)
     init_distributed(cfg)
     init_seed(cfg.train.seed + cfg.local_rank)
@@ -30,13 +29,13 @@ def main(cfg: DictConfig) -> None:
     model, optimizer, model_ema, resume_epochs = model_tune(model, scaler, device, cfg)
 
     scheduler, num_epochs, start_epoch = create_scheduler_v2(cfg, optimizer, resume_epochs)
-    loaders = load_dataloader_v2(cfg)
+    loaders = get_dataloader(cfg)
 
     saver = CheckpointSaver(model=model, optimizer=optimizer, args=cfg, model_ema=model_ema, amp_scaler=scaler,
                             max_history=cfg.train.save_max_history)
 
-    benchmark_result = benchmark_model(cfg.benchmark, model)
-    if cfg.local_rank == 0:
+    if cfg.local_rank == 0 and cfg.wandb:
+        benchmark_result = benchmark_model(cfg.benchmark, model)
         logging_benchmark_result_to_wandb(benchmark_result, cfg.name)
 
     fit = Fit(cfg, scaler, device, start_epoch, num_epochs, model, criterions, optimizer, model_ema, scheduler, saver,

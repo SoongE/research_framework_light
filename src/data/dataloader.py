@@ -1,19 +1,19 @@
-from timm.data import create_dataset, FastCollateMixup, Mixup, AugMixDataset, create_loader, resolve_data_config
+from timm.data import create_dataset, FastCollateMixup, Mixup, AugMixDataset, create_loader
+
+from src.data import get_cifar_dataloader
 
 
-def load_dataloader_v2(cfg):
-    aug = cfg.train.augmentation
+def base_dataloader(cfg):
+    aug = cfg.dataset.augmentation
     dataset = cfg.dataset
 
-    data_config = resolve_data_config(aug)
-
     dataset_train = create_dataset(
-        dataset.name, root=dataset.root, split=dataset.train_name, is_training=True,
+        dataset.name, root=dataset.root, split=dataset.train, is_training=True,
         class_map=dataset.class_map,
         batch_size=cfg.train.batch_size,
         repeats=aug.epoch_repeats)
     dataset_eval = create_dataset(
-        dataset.name, root=dataset.root, split=dataset.valid_name, is_training=False,
+        dataset.name, root=dataset.root, split=dataset.valid, is_training=False,
         class_map=dataset.class_map,
         batch_size=cfg.train.batch_size)
 
@@ -33,13 +33,9 @@ def load_dataloader_v2(cfg):
     # wrap dataset in AugMix helper
     if aug.aug_splits > 1:
         dataset_train = AugMixDataset(dataset_train, num_splits=cfg.aug_splits)
-
-    # create data loaders w/ augmentation pipeiine
-    train_interpolation = aug.train_interpolation
-
     loader_train = create_loader(
         dataset_train,
-        input_size=data_config['input_size'],
+        input_size=tuple(dataset.size),
         batch_size=cfg.train.batch_size,
         is_training=True,
         use_prefetcher=aug.prefetcher,
@@ -48,7 +44,7 @@ def load_dataloader_v2(cfg):
         re_mode=aug.remode,
         re_count=aug.recount,
         re_split=aug.resplit,
-        scale=dataset.scale,
+        scale=aug.scale,
         ratio=aug.ratio,
         hflip=aug.hflip,
         vflip=aug.vflip,
@@ -56,9 +52,9 @@ def load_dataloader_v2(cfg):
         auto_augment=aug.aa,
         num_aug_repeats=aug.aug_repeats,
         num_aug_splits=aug.aug_splits,
-        interpolation=train_interpolation,
-        mean=data_config['mean'],
-        std=data_config['std'],
+        interpolation=aug.train_interpolation,
+        mean=tuple(aug.mean),
+        std=tuple(aug.std),
         num_workers=cfg.train.num_workers,
         distributed=cfg.distributed,
         collate_fn=collate_fn,
@@ -69,16 +65,22 @@ def load_dataloader_v2(cfg):
 
     loader_eval = create_loader(
         dataset_eval,
-        input_size=data_config['input_size'],
+        input_size=tuple(dataset.size),
         batch_size=cfg.train.batch_size,
         is_training=False,
         use_prefetcher=aug.prefetcher,
         interpolation=aug.test_interpolation,
-        mean=data_config['mean'],
-        std=data_config['std'],
+        mean=tuple(aug.mean),
+        std=tuple(aug.std),
         num_workers=cfg.train.num_workers,
         distributed=cfg.distributed,
-        crop_pct=data_config['crop_pct'],
+        crop_pct=aug.crop_pct,
         pin_memory=aug.pin_mem,
     )
     return (loader_train, loader_eval)
+
+
+def get_dataloader(cfg):
+    if 'cifar' in cfg.dataset.name:
+        return get_cifar_dataloader(cfg)
+    return base_dataloader(cfg)

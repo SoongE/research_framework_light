@@ -80,7 +80,7 @@ def create_scheduler_v2(cfg, optimizer, resume_epochs):
 
 
 def create_criterion(cfg, device):
-    aug = cfg.train.augmentation
+    aug = cfg.dataset.augmentation
     mixup_active = aug.mixup > 0 or aug.cutmix > 0. or aug.cutmix_minmax is not None
     if mixup_active:
         # smoothing is handled with mixup target transform which outputs sparse, soft targets
@@ -88,12 +88,12 @@ def create_criterion(cfg, device):
             train_loss_fn = BinaryCrossEntropy(target_threshold=cfg.train.bce_target_thresh)
         else:
             train_loss_fn = SoftTargetCrossEntropy()
-    elif cfg.train.augmentaion.smoothing:
+    elif aug.smoothing:
         if cfg.train.bce_loss:
-            train_loss_fn = BinaryCrossEntropy(smoothing=cfg.train.augmentaion.smoothing,
+            train_loss_fn = BinaryCrossEntropy(smoothing=aug.smoothing,
                                                target_threshold=cfg.train.bce_target_thresh)
         else:
-            train_loss_fn = LabelSmoothingCrossEntropy(smoothing=cfg.train.augmentaion.smoothing)
+            train_loss_fn = LabelSmoothingCrossEntropy(smoothing=aug.smoothing)
     else:
         train_loss_fn = nn.CrossEntropyLoss()
     train_loss_fn = train_loss_fn.to(device)
