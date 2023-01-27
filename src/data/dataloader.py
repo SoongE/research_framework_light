@@ -1,65 +1,84 @@
-import warnings
-
-from hydra import initialize, compose
-from timm.data import create_dataset, create_loader, FastCollateMixup
-
-warnings.filterwarnings("ignore")
-
-mixup_args = {
-    'mixup_alpha': 0.1,
-    'cutmix_alpha': 1.0,
-    'prob': 1.0,
-    'switch_prob': 0.5,
-    'mode': 'batch',
-    'label_smoothing': 0,
-    'num_classes': 1000}
+from timm.data import create_dataset, FastCollateMixup, Mixup, AugMixDataset, create_loader, resolve_data_config
 
 
-def get_dataloader(cfg, *modes):
-    res = []
+def load_dataloader_v2(cfg):
+    aug = cfg.train.augmentation
+    dataset = cfg.dataset
 
-    for mode in modes:
-        is_training = True if mode == 'train' else False
+    data_config = resolve_data_config(aug)
 
-        collate_fn = FastCollateMixup(**mixup_args) if cfg.train.mixup and is_training else None
+    dataset_train = create_dataset(
+        dataset.name, root=dataset.root, split=dataset.train_name, is_training=True,
+        class_map=dataset.class_map,
+        batch_size=cfg.train.batch_size,
+        repeats=aug.epoch_repeats)
+    dataset_eval = create_dataset(
+        dataset.name, root=dataset.root, split=dataset.valid_name, is_training=False,
+        class_map=dataset.class_map,
+        batch_size=cfg.train.batch_size)
 
-        dataset = create_dataset(name=f'torch/{cfg.dataset.name}', root=cfg.dataset.root, split=mode,
-                                 is_training=is_training, batch_size=cfg.train.batch_size)
-        data_loader = create_loader(
-            dataset,
-            input_size=cfg.dataset.size,
-            batch_size=cfg.train.batch_size,
-            is_training=is_training,
-            scale=cfg.dataset.scale,
-            mean=cfg.dataset.mean,
-            std=cfg.dataset.std,
-            color_jitter=cfg.dataset.color_jitter,
-            num_workers=cfg.train.num_workers,
-            distributed=cfg.distributed,
-            pin_memory=True,
-            auto_augment=cfg.dataset.aa,
-            # num_aug_repeats=cfg.dataset.aug_repeats,
-            crop_pct=cfg.dataset.crop_pct,
-            collate_fn=collate_fn,
-            fp16=False,
-        )
+    collate_fn = None
+    mixup_active = aug.mixup > 0 or aug.cutmix > 0. or aug.cutmix_minmax is not None
+    if mixup_active:
+        mixup_args = dict(
+            mixup_alpha=aug.mixup, cutmix_alpha=aug.cutmix, cutmix_minmax=aug.cutmix_minmax,
+            prob=aug.mixup_prob, switch_prob=aug.mixup_switch_prob, mode=aug.mixup_mode,
+            label_smoothing=aug.smoothing, num_classes=dataset.num_classes)
+        if aug.prefetcher:
+            assert not aug.aug_splits  # collate conflict (need to support deinterleaving in collate mixup)
+            collate_fn = FastCollateMixup(**mixup_args)
+        else:
+            collate_fn = Mixup(**mixup_args)
 
-        res.append(data_loader)
+    # wrap dataset in AugMix helper
+    if aug.aug_splits > 1:
+        dataset_train = AugMixDataset(dataset_train, num_splits=cfg.aug_splits)
 
-    if len(modes) == 1:
-        return res[0]
-    else:
-        return res
+    # create data loaders w/ augmentation pipeiine
+    train_interpolation = aug.train_interpolation
 
+    loader_train = create_loader(
+        dataset_train,
+        input_size=data_config['input_size'],
+        batch_size=cfg.train.batch_size,
+        is_training=True,
+        use_prefetcher=aug.prefetcher,
+        no_aug=aug.no_aug,
+        re_prob=aug.reprob,
+        re_mode=aug.remode,
+        re_count=aug.recount,
+        re_split=aug.resplit,
+        scale=dataset.scale,
+        ratio=aug.ratio,
+        hflip=aug.hflip,
+        vflip=aug.vflip,
+        color_jitter=aug.color_jitter,
+        auto_augment=aug.aa,
+        num_aug_repeats=aug.aug_repeats,
+        num_aug_splits=aug.aug_splits,
+        interpolation=train_interpolation,
+        mean=data_config['mean'],
+        std=data_config['std'],
+        num_workers=cfg.train.num_workers,
+        distributed=cfg.distributed,
+        collate_fn=collate_fn,
+        pin_memory=aug.pin_mem,
+        use_multi_epochs_loader=aug.use_multi_epochs_loader,
+        worker_seeding=aug.worker_seeding,
+    )
 
-if __name__ == '__main__':
-    with initialize(config_path='../../configs'):
-        cfg = compose(config_name='config.yaml', overrides=['dataset=cifar100'])
-
-    loader = get_dataloader(cfg, cfg.dataset.trainset_name)
-    data = next(iter(loader))
-    x, y = map(lambda x: x.to('cpu'), data)
-    print(x.shape)
-    print(y.shape)
-
-    print(y)
+    loader_eval = create_loader(
+        dataset_eval,
+        input_size=data_config['input_size'],
+        batch_size=cfg.train.batch_size,
+        is_training=False,
+        use_prefetcher=aug.prefetcher,
+        interpolation=aug.test_interpolation,
+        mean=data_config['mean'],
+        std=data_config['std'],
+        num_workers=cfg.train.num_workers,
+        distributed=cfg.distributed,
+        crop_pct=data_config['crop_pct'],
+        pin_memory=aug.pin_mem,
+    )
+    return (loader_train, loader_eval)

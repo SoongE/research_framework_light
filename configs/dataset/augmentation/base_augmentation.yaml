@@ -1,5 +1,8 @@
 no_aug: False
 
+mean:
+std:
+
 scale: [ 0.08, 1.0 ]
 ratio: [ 0.75, 1.33 ]
 hflip: 0.5
@@ -11,6 +14,7 @@ crop_pct: 0.875
 epoch_repeats: 0
 aug_repeats: 0
 aug_splits: 0
+re:
 reprob: 0
 remode: pixel
 recount: 1

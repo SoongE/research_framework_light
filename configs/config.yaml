@@ -1,11 +1,25 @@
 defaults:
   - _self_
-  - set: base_set
+  - train: base_train
+  - dataset: imagenet
+  - info: info
+  - model: base_model
+  - benchmark: benchmark
+
+name: experiment0
+
+wandb: False
+distributed: False
+local_rank: 0
+world_size: 1
+port: 3456
+gpus: [ 0 ]
 
 hydra:
   run:
-    dir: runs/${set.model.model_name}_${set.dataset.name}/${set.name}_${now:%Y%m%d-%H%M%S}/
-
+    dir: runs/${dataset.name}_${model.model_name}/${name}_${now:%Y%m%d-%H%M%S}/
+  job:
+    chdir: True
   job_logging:
     version: 1
     formatters:
@@ -19,7 +33,7 @@ hydra:
       file:
         class: logging.FileHandler
         formatter: simple
-        filename: ${now:%m-%d}_${now:%H-%M}_${hydra.job.name}_${set.name}.log
+        filename: ${now:%m-%d}_${now:%H-%M}_${hydra.job.name}_${name}.log
     root:
       handlers:
         - console

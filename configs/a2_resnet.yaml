@@ -1,5 +1,5 @@
 defaults:
-  - base_set
+  - config
 
 gpus: [ 0,1,2,3 ]
 name: a2_resnet50

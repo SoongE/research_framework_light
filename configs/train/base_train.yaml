@@ -1,12 +1,12 @@
 defaults:
   - lr: base_lr
   - optimizer: base_optim
-  - augmentation: base_augmentation
 
 epochs: 100
 batch_size: 256
 num_workers: 8
-seed: 42
+seed: 0
+target_metric: top1
 
 bce_loss: False
 bce_target_thresh:
