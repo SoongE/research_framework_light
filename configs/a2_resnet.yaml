@@ -11,14 +11,14 @@ train:
   bce_loss: True
   target_thresh: 0.2
 
-  lr:
-    lr: 3.5e-3
+  lr_scheduler:
     weight_decay: 0.02
     warmup_t: 5
     warmup_lr: 1e-4
 
   optimizer:
-    opt: lamb
+    optim: lamb
+    lr: 3.5e-3
 
 model:
   model_name: resnet50

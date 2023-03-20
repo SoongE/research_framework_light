@@ -13,7 +13,7 @@ distributed: False
 local_rank: 0
 world_size: 1
 port: 3456
-gpus: [ 0 ]
+gpus: [ 1,2 ]
 
 hydra:
   run:

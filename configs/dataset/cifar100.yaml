@@ -4,7 +4,7 @@ defaults:
 name: cifar100
 root: /data/classification
 
-in_channel: 3
+in_channels: 3
 num_classes: 100
 size: 32
 

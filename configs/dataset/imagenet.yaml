@@ -2,9 +2,9 @@ defaults:
   - augmentation: base_augmentation
 
 name: imageNet
-root: /data/classification/imageNet
+root: /data/imageNet
 
-in_channel: 3
+in_channels: 3
 num_classes: 1000
 size: [ 3,224,224 ]
 

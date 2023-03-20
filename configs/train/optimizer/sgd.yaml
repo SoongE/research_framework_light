@@ -1,0 +1,6 @@
+defaults:
+  - base_optim
+
+optim: sgd
+lr: 0.1
+nesterov: False
