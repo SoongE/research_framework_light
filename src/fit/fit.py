@@ -1,7 +1,6 @@
 import logging
 
 import torch
-from timm.models import model_parameters
 from timm.utils import dispatch_clip_grad, distribute_bn, update_summary
 from torch.cuda.amp import autocast
 from torchmetrics import MeanMetric, Accuracy
@@ -9,7 +8,7 @@ from torchmetrics.functional import accuracy
 
 
 class Fit:
-    def __init__(self, cfg, scaler, device, start_epoch, num_epochs, model, criterion, optimizer, model_ema,
+    def __init__(self, cfg, scaler, device, num_epochs, model, criterion, optimizer, model_ema,
                  scheduler, saver, loader=None):
         self.device = device
         self.local_rank = cfg.local_rank
@@ -22,15 +21,18 @@ class Fit:
         self.grad_accumulation = cfg.train.optimizer.grad_accumulation
         self.double_valid = cfg.train.double_valid
         self.wandb = cfg.wandb
-        self.start_epoch = start_epoch
+        self.start_epoch = 0
         self.num_epochs = num_epochs
         self.logging_interval = 100
         self.num_classes = cfg.dataset.num_classes
         self.tm = cfg.train.target_metric
 
         self.model = model
-        self.train_criterion = criterion[0]
-        self.val_criterion = criterion[1]
+        if isinstance(criterion, list):
+            self.train_criterion = criterion[0]
+            self.val_criterion = criterion[1]
+        else:
+            self.train_criterion = self.val_criterion = criterion
         self.optimizer = optimizer
         self.model_ema = model_ema
         self.scaler = scaler
@@ -63,8 +65,6 @@ class Fit:
             else:
                 eval_metrics = self.validate(epoch, ema=False)
 
-            self.scheduler.step(epoch + 1, eval_metrics[self.tm])
-
             # save proper checkpoint with eval metric
             if self._master_node():
                 torch.cuda.synchronize()
@@ -81,8 +81,6 @@ class Fit:
 
         with autocast(enabled=True if self.scaler else False):
             prob = model(x)
-            print(prob.shape)
-            print(y.shape)
             loss = criterion(prob, y)
 
         return loss, prob, y
@@ -95,7 +93,6 @@ class Fit:
         self.model.train()
         self.optimizer.zero_grad()
         for i, data in enumerate(self.train_loader):
-            print(i, data[1].shape)
             loss, prob, target = self.iterate(self.model, data, self.train_criterion)
             loss /= self.grad_accumulation
 
@@ -108,7 +105,7 @@ class Fit:
 
             torch.cuda.synchronize()
             num_updates += 1
-            self.scheduler.step_update(num_updates=num_updates, metric=computed_losses)
+            self.scheduler.step()
 
         if hasattr(self.optimizer, 'sync_lookahead'):
             self.optimizer.sync_lookahead()
@@ -155,23 +152,21 @@ class Fit:
         return accuracies_list, self._metrics()
 
     def _backward(self, loss, update_grad):
-        create_graph = hasattr(self.optimizer, 'is_second_order') and self.optimizer.is_second_order
         if self.scaler:
-            self._scaler_backward(loss, create_graph, update_grad)
+            self._scaler_backward(loss, update_grad)
         else:
-            self._default_backward(loss, create_graph, update_grad)
+            self._default_backward(loss, update_grad)
 
         if update_grad:
             self.optimizer.zero_grad()
             if self.model_ema:
                 self.model_ema.update(self.model)
 
-    def _scaler_backward(self, loss, create_graph, update_grad):
-        self.scaler(loss, self.optimizer, self.clip_grad, self.clip_mode,
-                    model_parameters(self.model, exclude_head='agc' in self.clip_mode), create_graph, update_grad)
+    def _scaler_backward(self, loss, update_grad):
+        self.scaler(loss, self.optimizer, self.model.parameters(), self.clip_grad, update_grad)
 
-    def _default_backward(self, loss, second_order, update_grad):
-        loss.backward(create_graph=second_order)
+    def _default_backward(self, loss, update_grad):
+        loss.backward()
         if update_grad:
             if self.clip_grad:
                 dispatch_clip_grad(self.model.parameters(), self.clip_grad, mode=self.clip_mode)
