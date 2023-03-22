@@ -39,7 +39,7 @@ class ObjectFactory:
             assert not self.train.sync_bn, 'Cannot use SyncBatchNorm with torchscripted model'
             model = torch.jit.script(model)
 
-        return model
+        return torch.compile(model)
 
     def create_optimizer_and_scheduler(self, model, iter_per_epoch):
         self.cfg.train.iter_per_epoch = iter_per_epoch

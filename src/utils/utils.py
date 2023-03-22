@@ -15,7 +15,7 @@ def model_tune(model, cfg):
     load_checkpoint(model_ema.module, cfg.resume, use_ema=cfg.train.model_ema) if cfg.train.resume else None
 
     if cfg.distributed:
-        model = DistributedDataParallel(model, device_ids=[cfg.local_rank], broadcast_buffers=cfg.train.ddp_bb)
+        model = DistributedDataParallel(model, static_graph=False, device_ids=[cfg.local_rank], broadcast_buffers=cfg.train.ddp_bb)
 
     return model, model_ema
 
