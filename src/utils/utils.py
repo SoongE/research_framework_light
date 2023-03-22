@@ -4,7 +4,7 @@ from timm.utils import ModelEmaV2
 from torch.nn.parallel import DistributedDataParallel
 
 
-def print_pass(*args):
+def print_pass(*args, **kwargs):
     pass
 
 

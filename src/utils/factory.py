@@ -59,9 +59,9 @@ class ObjectFactory:
         elif optim == 'adamw':
             optimizer = AdamW(parameter, lr, weight_decay=weight_decay, betas=self.optim.betas, eps=self.optim.eps)
         elif optim == 'lion':
-            optimizer = Lion(model.parameters(), lr, weight_decay=self.optim.weight_decay)
+            optimizer = Lion(parameter, lr, weight_decay=self.optim.weight_decay)
         elif optim == 'lamb':
-            optimizer = Lamb(model.parameters(), lr)
+            optimizer = Lamb(parameter, lr, weight_decay=weight_decay, betas=self.optim.betas, eps=self.optim.eps)
         else:
             NotImplementedError(f"{optim} is not supported yet")
 
@@ -111,6 +111,8 @@ class ObjectFactory:
 
 
 class NativeScalerWithGradAccum:
+    state_dict_key = "amp_scaler"
+
     def __init__(self):
         self._scaler = GradScaler()
 
