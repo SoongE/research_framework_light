@@ -1,5 +1,7 @@
 defaults:
-  - base_set
+  - _self_
+  - config
+  - override train/optimizer: lamb
 
 gpus: [ 0,1 ]
 name: a3_resnet50
@@ -11,14 +13,11 @@ train:
   bce_loss: True
   target_thresh: 0.2
 
-  lr:
-    weight_decay: 0.02
+  lr_scheduler:
     warmup_t: 5
     warmup_lr: 1e-4
 
   optimizer:
-    optim: lamb
-    lr: 5e-3
     grad_accumulation: 4
 
 model:

@@ -1,7 +1,9 @@
 defaults:
   - config
+  - override train/optimizer: lamb
+  - _self_
 
-gpus: [ 0,1,2,3 ]
+gpus: [ 0,1 ]
 name: a2_resnet50
 
 train:
@@ -12,13 +14,8 @@ train:
   target_thresh: 0.2
 
   lr_scheduler:
-    weight_decay: 0.02
     warmup_t: 5
     warmup_lr: 1e-4
-
-  optimizer:
-    optim: lamb
-    lr: 3.5e-3
 
 model:
   model_name: resnet50
