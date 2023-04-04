@@ -8,7 +8,7 @@ defaults:
 
 name: experiment0
 
-wandb: False
+wandb: True
 distributed: False
 local_rank: 0
 world_size: 1
