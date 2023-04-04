@@ -28,3 +28,9 @@ Pre-defined setting
 ```bash
 torchrun --nproc_per_node=4 main.py --config-name=a2_resnet wandb=True
 ```
+
+Resume
+
+```bash
+python main.py train.resume=runs/modelName_dataset/exp_name
+```

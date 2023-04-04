@@ -8,8 +8,8 @@ from torchmetrics.functional import accuracy
 
 
 class Fit:
-    def __init__(self, cfg, scaler, device, num_epochs, model, criterion, optimizer, model_ema,
-                 scheduler, saver, loader=None):
+    def __init__(self, cfg, scaler, device, epochs, model, criterion, optimizer, model_ema, scheduler, saver,
+                 loader=None):
         self.device = device
         self.local_rank = cfg.local_rank
         self.world_size = cfg.world_size
@@ -21,8 +21,7 @@ class Fit:
         self.grad_accumulation = cfg.train.optimizer.grad_accumulation
         self.double_valid = cfg.train.double_valid
         self.wandb = cfg.wandb
-        self.start_epoch = 0
-        self.num_epochs = num_epochs
+        self.start_epoch, self.num_epochs = epochs
         self.logging_interval = 100
         self.num_classes = cfg.dataset.num_classes
         self.tm = cfg.train.target_metric
@@ -106,6 +105,9 @@ class Fit:
             torch.cuda.synchronize()
             num_updates += 1
             self.scheduler.step()
+
+            if i == 2:
+                break
 
         if hasattr(self.optimizer, 'sync_lookahead'):
             self.optimizer.sync_lookahead()

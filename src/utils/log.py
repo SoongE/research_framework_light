@@ -1,4 +1,8 @@
 import logging
+import os
+from glob import glob
+
+import hydra
 
 
 class Logger:
@@ -6,7 +10,14 @@ class Logger:
         self.cfg = cfg
         self.wandb = wandb
 
-        # self.base_path = hydra.utils.get_original_cwd()
+        self.id = None
+        if cfg.train.resume:
+            base_path = hydra.utils.get_original_cwd()
+            try:
+                self.id = glob(os.path.join(base_path, cfg.train.resume, 'wandb', 'run-*'))[0].rsplit('-', 1)[-1]
+            except FileNotFoundError:
+                print(f'Wandb folder is not founded at {os.path.join(base_path, cfg.train.resume)}')
+
         self._init_logger()
 
     def log(self, data):
@@ -21,9 +32,9 @@ class Logger:
                 import wandb
 
                 wandb.init(project=self.cfg.info.project, entity=self.cfg.info.entity, config=self.cfg,
-                           # name=f"{datetime.now().strftime('%Y-%m-%d/%H:%M:%S')}/{self.cfg.name}",
-                           name=f"{self.cfg.name}",
-                           settings=wandb.Settings(_disable_stats=True), save_code=True, reinit=True)
+                           name=f"{self.cfg.name}", id=self.id,
+                           settings=wandb.Settings(_disable_stats=True), save_code=True, resume='allow')
+                # name=f"{datetime.now().strftime('%Y-%m-%d/%H:%M:%S')}/{self.cfg.name}",
 
                 self.wandb_logger = wandb
 
