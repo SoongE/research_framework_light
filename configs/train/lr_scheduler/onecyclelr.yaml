@@ -1,5 +1,4 @@
 defaults:
   - base_scheduler
 
-sched: cosine
-min_lr: 1e-6
+sched: onecyclelr

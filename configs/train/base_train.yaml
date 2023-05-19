@@ -1,6 +1,6 @@
 defaults:
   - lr_scheduler: consine
-  - optimizer: sgd
+  - optimizer: adamw
 
 epochs: 100
 iter_per_epoch:

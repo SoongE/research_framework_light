@@ -1,11 +1,11 @@
 defaults:
   - augmentation: base_augmentation
 
-name: cifar100
+name: cifar10
 root: /data/cifar
 
 in_channels: 3
-num_classes: 100
+num_classes: 10
 size: 128
 
 train: train

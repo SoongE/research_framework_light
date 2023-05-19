@@ -1,0 +1,6 @@
+defaults:
+  - base_scheduler
+
+sched: multistep
+milestones: [60, 120, 160]
+gamma: 0.2
