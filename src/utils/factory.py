@@ -59,7 +59,7 @@ class ObjectFactory:
         elif optim == 'adamw':
             optimizer = AdamW(parameter, lr, weight_decay=weight_decay, betas=self.optim.betas, eps=self.optim.eps)
         elif optim == 'lion':
-            optimizer = Lion(parameter, lr, weight_decay=self.optim.weight_decay)
+            optimizer = Lion(parameter, lr, weight_decay=weight_decay)
         elif optim == 'lamb':
             optimizer = Lamb(parameter, lr, weight_decay=weight_decay, betas=self.optim.betas, eps=self.optim.eps)
         else:
