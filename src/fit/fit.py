@@ -1,9 +1,10 @@
 import logging
 
 import torch
+import torchmetrics
 from timm.utils import dispatch_clip_grad, distribute_bn, update_summary
 from torch.cuda.amp import autocast
-from torchmetrics import MeanMetric, Accuracy
+from torchmetrics import MeanMetric
 from torchmetrics.functional import accuracy
 
 
@@ -42,9 +43,8 @@ class Fit:
             self.val_loader = loader[1]
 
         self.losses = MeanMetric(compute_on_step=False).to(self.device)
-        self.top1 = Accuracy(task='multiclass', compute_on_step=False, num_classes=self.num_classes).to(self.device)
-        self.top5 = Accuracy(task='multiclass', compute_on_step=False, num_classes=self.num_classes, top_k=5).to(
-            self.device)
+        self.metric_fn = self.init_metrics(cfg.dataset.task, 0.5, cfg.dataset.num_classes, cfg.dataset.num_classes,
+                                           'micro')
 
     def __call__(self, *args, **kwargs):
         for epoch in range(self.start_epoch, self.num_epochs):
@@ -69,7 +69,8 @@ class Fit:
                 torch.cuda.synchronize()
                 best_metric, best_epoch = self.saver.save_checkpoint(epoch, metric=eval_metrics[self.tm])
                 eval_metrics.update({'Best_Top1': best_metric})
-                update_summary(epoch, train_metrics, eval_metrics, 'summary.csv', log_wandb=self.wandb)
+                update_summary(epoch, train_metrics, eval_metrics, 'summary.csv', log_wandb=self.wandb,
+                               write_header=True)
 
         if self._master_node():
             logging.info(f'*** Best Top1: {best_metric} {best_epoch} ***')
@@ -176,20 +177,20 @@ class Fit:
 
     def _update_metric(self, loss, prob, target):
         self.losses.update(loss.item() / prob.size(0))
-        self.top1.update(prob, target)
-        self.top5.update(prob, target)
+        for fn in self.metric_fn.values():
+            fn.update(prob, target)
 
     def _reset_metric(self):
         self.losses.reset()
-        self.top1.reset()
-        self.top5.reset()
+        for fn in self.metric_fn.values():
+            fn.reset()
 
     def _metrics(self):
-        return {
-            'loss': self.losses.compute(),
-            'top1': self.top1.compute() * 100,
-            'top5': self.top5.compute() * 100,
-        }
+        result = dict()
+        result['loss'] = self.losses.compute()
+        for k, fn in self.metric_fn.items():
+            result[k] = fn.compute() * 100
+        return result
 
     def _print(self, metrics, epoch, i, max_iter, mode):
         log = f'{mode} {epoch:>3}: [{i:>4d}/{max_iter}]  '
@@ -199,3 +200,13 @@ class Fit:
 
     def _master_node(self):
         return self.local_rank == 0
+
+    def init_metrics(self, task, threshold, num_class, num_label, average, top_k=1):
+        metric_fn = dict()
+        metric_names = ['Accuracy', 'F1Score', 'Specificity', 'Recall', 'Precision', 'AUROC', 'ConfusionMatrix']
+
+        for metric in metric_names:
+            metric_fn[metric] = torchmetrics.__dict__[metric](task=task, threshold=threshold, num_classes=num_class,
+                                                              num_labels=num_label, top_k=top_k,
+                                                              average='macro' if metric == 'AUROC' else average)
+        return metric_fn
