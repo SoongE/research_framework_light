@@ -6,6 +6,7 @@ root: /data/imageNet
 
 in_channels: 3
 num_classes: 1000
+task: multiclass
 size: [ 3,224,224 ]
 
 train: train
