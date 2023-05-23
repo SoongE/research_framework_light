@@ -38,6 +38,8 @@ def init_distributed(cfg):
 
 
 def cuda_setting(gpus):
+    if isinstance(gpus, int):
+        gpus = [gpus]
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(str(e) for e in gpus)
 

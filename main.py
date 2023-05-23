@@ -6,11 +6,12 @@ from src.data import get_dataloader
 from src.fit import Fit
 from src.initial_setting import init_seed, init_distributed, init_logger, cuda_setting
 from src.utils import model_tune, logging_benchmark_result_to_wandb, benchmark_model, ObjectFactory, CheckpointSaver
-from src.models import *
 
 
 @hydra.main(config_path="configs", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
+    cfg.train.epochs = 2
+    cfg.gpus = 9
     cuda_setting(cfg.gpus)
     init_distributed(cfg)
     init_seed(cfg.train.seed + cfg.local_rank)

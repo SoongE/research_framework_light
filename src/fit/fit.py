@@ -26,6 +26,7 @@ class Fit:
         self.logging_interval = 100
         self.num_classes = cfg.dataset.num_classes
         self.tm = cfg.train.target_metric
+        self.eval_metrics = cfg.train.eval_metrics
 
         self.model = model
         if isinstance(criterion, list):
@@ -68,12 +69,12 @@ class Fit:
             if self._master_node():
                 torch.cuda.synchronize()
                 best_metric, best_epoch = self.saver.save_checkpoint(epoch, metric=eval_metrics[self.tm])
-                eval_metrics.update({'Best_Top1': best_metric})
+                eval_metrics.update({f'Best_{self.tm}': best_metric})
                 update_summary(epoch, train_metrics, eval_metrics, 'summary.csv', log_wandb=self.wandb,
-                               write_header=True)
+                               write_header=(epoch == 0))
 
         if self._master_node():
-            logging.info(f'*** Best Top1: {best_metric} {best_epoch} ***')
+            logging.info(f'*** Best {self.tm}: {best_metric} {best_epoch} ***')
 
     def iterate(self, model, data, criterion):
         x, y = map(lambda x: x.to(self.device), data)
@@ -88,7 +89,6 @@ class Fit:
     def train(self, epoch):
         self._reset_metric()
         total = len(self.train_loader)
-        num_updates = epoch * total
 
         self.model.train()
         self.optimizer.zero_grad()
@@ -99,12 +99,10 @@ class Fit:
             self._backward(loss, (i + 1) % self.grad_accumulation == 0)
 
             self.losses.update(loss)
-            computed_losses = self.losses.compute()
             if self._master_node() and i % self.logging_interval == 0:
-                logging.info(f'Train {epoch:>3}: [{i:>4}/{total}]  loss:{computed_losses:.6f}')
+                logging.info(f'Train {epoch:>3}: [{i:>4}/{total}]  loss:{self.losses.compute():.6f}')
 
             torch.cuda.synchronize()
-            num_updates += 1
             self.scheduler.step()
 
             if i == 2:
@@ -113,7 +111,7 @@ class Fit:
         if hasattr(self.optimizer, 'sync_lookahead'):
             self.optimizer.sync_lookahead()
 
-        return {'loss': self.losses.compute()}
+        return {'loss': self.losses.compute().item()}
 
     @torch.no_grad()
     def validate(self, epoch, ema=False):
@@ -128,9 +126,8 @@ class Fit:
             loss /= self.grad_accumulation
             self._update_metric(loss, prob, target)
 
-            metrics = self._metrics()
             if self._master_node() and i % self.logging_interval == 0:
-                logging.info(self._print(metrics, epoch, i, total, log_prefix))
+                logging.info(self._print(self._metrics(), epoch, i, total, log_prefix))
 
         return self._metrics()
 
@@ -148,9 +145,8 @@ class Fit:
             self._update_metric(loss, prob, target)
             accuracies_list.append(accuracy(prob, target))
 
-            metrics = self._metrics()
             if self._master_node() and i % self.logging_interval == 0:
-                logging.info(self._print(metrics, 0, i, total, 'Test'))
+                logging.info(self._print(self._metrics(), 0, i, total, 'Test'))
 
         return accuracies_list, self._metrics()
 
@@ -187,13 +183,16 @@ class Fit:
 
     def _metrics(self):
         result = dict()
-        result['loss'] = self.losses.compute()
+        result['loss'] = self.losses.compute().tolist()
         for k, fn in self.metric_fn.items():
-            result[k] = fn.compute() * 100
+            result[k] = fn.compute().tolist()
         return result
 
-    def _print(self, metrics, epoch, i, max_iter, mode):
+    @staticmethod
+    def _print(metrics, epoch, i, max_iter, mode):
         log = f'{mode} {epoch:>3}: [{i:>4d}/{max_iter}]  '
+        if "ConfusionMatrix" in metrics:
+            metrics.pop('ConfusionMatrix')
         for k, v in metrics.items():
             log += f'{k}:{v:.6f} | '
         return log[:-3]
@@ -203,10 +202,10 @@ class Fit:
 
     def init_metrics(self, task, threshold, num_class, num_label, average, top_k=1):
         metric_fn = dict()
-        metric_names = ['Accuracy', 'F1Score', 'Specificity', 'Recall', 'Precision', 'AUROC', 'ConfusionMatrix']
 
-        for metric in metric_names:
+        for metric in self.eval_metrics:
             metric_fn[metric] = torchmetrics.__dict__[metric](task=task, threshold=threshold, num_classes=num_class,
-                                                              num_labels=num_label, top_k=top_k,
-                                                              average='macro' if metric == 'AUROC' else average)
+                                                              compute_on_step=False,
+                                                              average='macro' if metric == 'AUROC' else average,
+                                                              num_labels=num_label, top_k=top_k).to(self.device)
         return metric_fn
