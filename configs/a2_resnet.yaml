@@ -14,8 +14,9 @@ train:
   target_thresh: 0.2
 
   lr_scheduler:
-    warmup_t: 5
+    warmup_epochs: 5
     warmup_lr: 1e-4
+    min_lr: 1e-6
 
 model:
   model_name: resnet50
