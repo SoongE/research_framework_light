@@ -1,5 +1,6 @@
 import hydra
 import torch
+import wandb
 from omegaconf import DictConfig
 
 from src.data import get_dataloader
@@ -32,8 +33,10 @@ def main(cfg: DictConfig) -> None:
                             scheduler=scheduler, max_history=cfg.train.save_max_history)
 
     if cfg.local_rank == 0 and cfg.wandb and not cfg.train.resume:
-        benchmark_result = benchmark_model(cfg.benchmark, model)
+        benchmark_result = benchmark_model(cfg, model)
         logging_benchmark_result_to_wandb(benchmark_result, cfg.name)
+
+    wandb.finish()
 
     cfg = factory.cfg
     epochs = (start_epoch, cfg.train.epochs)

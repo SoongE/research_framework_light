@@ -6,7 +6,7 @@ defaults:
   - _self_
 
 gpus: [ 0,1,2,3 ]
-name: cifar100
+name: ${dataset.name}_${model.model_name}
 
 train:
   epochs: 50
