@@ -5,7 +5,6 @@ import torchmetrics
 from timm.utils import dispatch_clip_grad, distribute_bn, update_summary
 from torch.cuda.amp import autocast
 from torchmetrics import MeanMetric
-from torchmetrics.functional import accuracy
 
 
 class Fit:
@@ -97,16 +96,14 @@ class Fit:
             loss /= self.grad_accumulation
 
             self._backward(loss, (i + 1) % self.grad_accumulation == 0)
-
             self.losses.update(loss)
+
+            _computed_loss = self.losses.compute()
             if self._master_node() and i % self.logging_interval == 0:
-                logging.info(f'Train {epoch:>3}: [{i:>4}/{total}]  loss:{self.losses.compute():.6f}')
+                logging.info(f'Train {epoch:>3}: [{i:>4}/{total}]  loss:{_computed_loss:.6f}')
 
             torch.cuda.synchronize()
             self.scheduler.step()
-
-            if i == 2:
-                break
 
         if hasattr(self.optimizer, 'sync_lookahead'):
             self.optimizer.sync_lookahead()
@@ -126,29 +123,28 @@ class Fit:
             loss /= self.grad_accumulation
             self._update_metric(loss, prob, target)
 
+            _metrics = self._metrics()
             if self._master_node() and i % self.logging_interval == 0:
-                logging.info(self._print(self._metrics(), epoch, i, total, log_prefix))
+                logging.info(self._print(_metrics, epoch, i, total, log_prefix))
 
         return self._metrics()
 
     @torch.no_grad()
     def test(self, ema, test_loader):
-        self._reset_metric()
-        accuracies_list = list()
-        total = len(test_loader)
-
         model = self.model_ema if ema else self.model
+        self._reset_metric()
+        total = len(test_loader)
 
         model.eval()
         for i, data in enumerate(test_loader):
             loss, prob, target = self.iterate(model, data, self.val_criterion)
             self._update_metric(loss, prob, target)
-            accuracies_list.append(accuracy(prob, target))
 
+            _metrics = self._metrics()
             if self._master_node() and i % self.logging_interval == 0:
-                logging.info(self._print(self._metrics(), 0, i, total, 'Test'))
+                logging.info(self._print(_metrics, 0, i, total, 'Test'))
 
-        return accuracies_list, self._metrics()
+        return self._metrics()
 
     def _backward(self, loss, update_grad):
         if self.scaler:

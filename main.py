@@ -10,13 +10,12 @@ from src.utils import model_tune, logging_benchmark_result_to_wandb, benchmark_m
 
 @hydra.main(config_path="configs", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
-    cfg.train.epochs = 2
-    cfg.gpus = 9
     cuda_setting(cfg.gpus)
     init_distributed(cfg)
     init_seed(cfg.train.seed + cfg.local_rank)
 
     device = torch.device(f'cuda:{cfg.local_rank}') if torch.cuda.is_available() else torch.device('cpu')
+    cfg.name = cfg.model.model_name if cfg.name == '' else cfg.name
 
     init_logger(cfg)
 

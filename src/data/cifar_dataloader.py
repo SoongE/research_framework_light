@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from torch.utils.data import RandomSampler, SequentialSampler
 from torch.utils.data.dataloader import default_collate, DataLoader
 from torchvision import transforms
-from torchvision.datasets import CIFAR100
+from torchvision.datasets import CIFAR100, CIFAR10
 from torchvision.datasets.samplers import DistributedSampler
 from torchvision.transforms import RandomChoice
 
@@ -27,7 +27,7 @@ class TrainTransform:
             elif auto_aug.startswith('ta_wide'):
                 transform_list.append(transforms.TrivialAugmentWide(interpolation=interpolation))
             elif auto_aug.startswith('aa'):
-                policy = transforms.AutoAugmentPolicy('imagenet')
+                policy = transforms.AutoAugmentPolicy('cifar10')
                 transform_list.append(transforms.AutoAugment(policy=policy, interpolation=interpolation))
 
         if resize_mode == 'RandomResizedCrop':
@@ -135,13 +135,14 @@ class CutMix:
 
         batch[:, :, start_x:end_x, start_y:end_y] = batch_roll[:, :, start_x:end_x, start_y:end_y]
         target = target * (1 - ratio) + target_roll * ratio
-        print(batch.shape)
-        print(target.shape)
         return batch, target
 
 
 def get_dataset(cfg):
-    dataset_class = CIFAR100
+    if cfg.dataset.name == 'cifar10':
+        dataset_class = CIFAR10
+    else:
+        dataset_class = CIFAR100
     aug = cfg.dataset.augmentation
     interpolation = aug.train_interpolation
     train_transform = TrainTransform(cfg.dataset.size, aug.train_resize_mode, aug.random_crop_pad,
