@@ -306,9 +306,6 @@ def _try_run(
 def benchmark(args, model=None):
     if args.amp:
         args.precision = 'amp'
-    # print(f'Benchmarking in {args.precision} precision. '
-    #       f'{"NHWC" if args.channels_last else "NCHW"} layout. '
-    #       f'torchscript {"enabled" if args.torchscript else "disabled"}')
 
     bench_kwargs = OmegaConf.to_container(args).copy()
     bench_kwargs.pop('amp')
@@ -329,17 +326,14 @@ def benchmark(args, model=None):
     return run_results
 
 
-def main():
-    with initialize('../../configs'):
-        cfg = compose('base_set')
-    results = benchmark(cfg.benchmark)
-    print(f'--result\n{json.dumps(results, indent=4)}')
-
-
 def benchmark_model(cfg, model):
-    result = benchmark(cfg, model)
-    result.pop('batch_size')
-    result.pop('img_size')
+    if isinstance(cfg.dataset.size, int):
+        cfg.benchmark.input_size = (cfg.dataset.in_channels, cfg.dataset.size, cfg.dataset.size)
+    else:
+        cfg.benchmark.input_size = cfg.dataset.size
+
+    cfg.benchmark.num_classes = cfg.dataset.num_classes
+    result = benchmark(cfg.benchmark, model)
     print(f'Benchmark result\n{json.dumps(result, indent=4)}')
     return result
 
@@ -358,5 +352,5 @@ if __name__ == '__main__':
         cfg = compose('config')
 
     model = create_model('resnet50')
-    results = benchmark_model(cfg.set.benchmark, model)
+    results = benchmark_model(cfg.benchmark, model)
     print(results)
