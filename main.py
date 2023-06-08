@@ -36,13 +36,12 @@ def main(cfg: DictConfig) -> None:
         benchmark_result = benchmark_model(cfg, model)
         logging_benchmark_result_to_wandb(benchmark_result, cfg.name)
 
-    wandb.finish()
-
     cfg = factory.cfg
     epochs = (start_epoch, cfg.train.epochs)
     fit = Fit(cfg, scaler, device, epochs, model, criterion, optimizer, model_ema, scheduler, saver, loaders)
 
     fit()
+    wandb.finish()
 
 
 if __name__ == "__main__":
