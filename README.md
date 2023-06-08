@@ -9,28 +9,36 @@ below code.
 pip install hydra-core --upgrade
 ```
 
-#### How to run
+### How to run
 
-Single GPU
+#### Single GPU
 
 ```bash
-python main.py gpus=[0]
+python main.py gpus=0
 ```
 
-Multi GPU
+#### Multi GPU
 
 ```bash
 torchrun --nproc_per_node=4 main.py gpus=[0,1,2,3]
 ```
 
-Pre-defined setting
+#### Pre-defined setting
 
 ```bash
-torchrun --nproc_per_node=4 main.py --config-name=a2_resnet wandb=True
+torchrun --nproc_per_node=2 main.py --config-name=a3_resnet gpus=[0,1]
 ```
 
-Resume
+#### Resume
 
 ```bash
 python main.py train.resume=runs/modelName_dataset/exp_name
+```
+
+#### Sequential multi train
+
+The resnet34 will be trained automatically after finishing resnet18 training.
+
+```bash
+torchrun --nproc_per_node=4 main.py gpus=[0,1,2,3] model.model_name=resnet18,resnet34,resnet50
 ```
