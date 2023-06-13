@@ -1,3 +1,5 @@
+import gc
+
 import hydra
 import torch
 import wandb
@@ -32,7 +34,7 @@ def main(cfg: DictConfig) -> None:
     saver = CheckpointSaver(model=model, optimizer=optimizer, args=cfg, model_ema=model_ema, amp_scaler=scaler,
                             scheduler=scheduler, max_history=cfg.train.save_max_history)
 
-    if cfg.local_rank == 0 and cfg.wandb and not cfg.train.resume:
+    if cfg.is_master and cfg.wandb and not cfg.train.resume:
         benchmark_result = benchmark_model(cfg, model)
         logging_benchmark_result_to_wandb(benchmark_result, cfg.name)
 
@@ -41,7 +43,11 @@ def main(cfg: DictConfig) -> None:
     fit = Fit(cfg, scaler, device, epochs, model, criterion, optimizer, model_ema, scheduler, saver, loaders)
 
     fit()
-    wandb.finish()
+
+    if cfg.is_master:
+        torch.cuda.empty_cache()
+        gc.collect()
+        wandb.finish(quiet=True)
 
 
 if __name__ == "__main__":

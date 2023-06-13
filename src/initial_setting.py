@@ -10,7 +10,7 @@ from src.utils import Logger, print_pass
 
 
 def init_logger(cfg):
-    if cfg.local_rank == 0:
+    if cfg.is_master == 0:
         logger = Logger(cfg, cfg.wandb)
         return logger
 
@@ -22,20 +22,22 @@ def init_distributed(cfg):
         cfg.world_size = 1
     cfg.distributed = cfg.world_size > 1
 
-    if not cfg.distributed:
-        return
+    if cfg.distributed:
+        if not torch.distributed.is_initialized():
+            torch.distributed.init_process_group(
+                backend='nccl',
+                init_method='env://',
+            )
 
-    torch.distributed.init_process_group(
-        backend='nccl',
-        init_method='env://',
-    )
+        cfg.local_rank = torch.distributed.get_rank()
+        cfg.world_size = torch.distributed.get_world_size()
+        torch.cuda.set_device(cfg.local_rank)
+        torch.cuda.empty_cache()
 
-    cfg.local_rank = int(os.environ['LOCAL_RANK'])
-    torch.cuda.set_device(cfg.local_rank)
-    torch.cuda.empty_cache()
-    if cfg.local_rank != 0:
-        builtins.print = print_pass
+        if cfg.local_rank != 0:
+            builtins.print = print_pass
 
+        cfg.is_master = cfg.local_rank == 0
 
 def cuda_setting(gpus):
     if isinstance(gpus, int):

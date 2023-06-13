@@ -14,6 +14,7 @@ distributed: False
 local_rank: 0
 world_size: 1
 port: 3456
+is_master: True
 
 hydra:
   run:
