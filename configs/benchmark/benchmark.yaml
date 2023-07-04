@@ -1,16 +1,19 @@
+bench: inference # [inference|train|both|profile|all]
 detail: False
 no_retry: False
-result_file:
+result_file: benchmark
 num_warm_iter: 10
 num_bench_iter: 40
 
-model: ???
+model:
+model_list:
 batch_size: 256
 input_size: [ 3,224,224 ]
 use_train_size: False
 num_classes: 1000
 channels_last: True
 amp: True
+amp_dtype: float16
 
 precision: float32
 fuser: # te, old, nvfuser
@@ -21,7 +24,7 @@ grad_checkpointing: False
 
 hydra:
   run:
-    dir: benchmark_model/${set.model.model_name}_${now:%Y%m%d-%H%M%S}/
+    dir: benchmark_model/${model.model_name}_${now:%Y%m%d-%H%M%S}/
 
   job_logging:
     version: 1
@@ -36,7 +39,7 @@ hydra:
       file:
         class: logging.FileHandler
         formatter: simple
-        filename: ${now:%m-%d}_${now:%H-%M}_${hydra.job.name}_${set.name}.log
+        filename: ${now:%m-%d}_${now:%H-%M}_${hydra.job.name}_${model}.log
     root:
       handlers:
         - console

@@ -7,7 +7,7 @@ root: /data/cifar
 in_channels: 3
 num_classes: 10
 task: multiclass
-size: 128
+size: 32
 
 train: train
 valid: test

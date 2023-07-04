@@ -1,7 +1,7 @@
 defaults:
   - base_optim
 
-optim: sgd
+opt: sgd
 
 lr: 0.1
 momentum: 0.9

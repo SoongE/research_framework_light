@@ -9,5 +9,5 @@ drop_rate: 0
 drop_path_rate:
 drop_block_rate:
 
-gp:
+gp: # (fast, avg, max, avgmax, avgmaxc)
 features_only: False
