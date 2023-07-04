@@ -1,0 +1,7 @@
+session_name: compare-compile
+windows:
+  - window_name: window
+    layout: tiled
+    panes:
+      - torchrun --nproc_per_node=2 --master_port=12345 main.py --config-name=a3_resnet gpus=[1,2] torchcompile=False name=a3_resnet
+      - torchrun --nproc_per_node=2 --master_port=12346 main.py --config-name=a3_resnet gpus=[4,8] torchcompile=True name=a3_resnet_compile
