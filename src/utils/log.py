@@ -3,6 +3,7 @@ import os
 from glob import glob
 
 import hydra
+from omegaconf import OmegaConf
 
 
 class Logger:
@@ -31,8 +32,8 @@ class Logger:
             try:
                 import wandb
 
-                wandb.init(project=self.cfg.info.project, entity=self.cfg.info.entity, config=self.cfg,
-                           name=f"{self.cfg.name}", id=self.id,
+                wandb.init(project=self.cfg.info.project, entity=self.cfg.info.entity,
+                           config=OmegaConf.to_container(self.cfg), name=f"{self.cfg.name}", id=self.id,
                            settings=wandb.Settings(_disable_stats=True), save_code=True, resume='allow')
                 # name=f"{datetime.now().strftime('%Y-%m-%d/%H:%M:%S')}/{self.cfg.name}",
 
