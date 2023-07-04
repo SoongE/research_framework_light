@@ -115,7 +115,7 @@ class Engine:
 
             num_updates += 1
             mean_loss = self.losses.compute()
-            if update_idx % self.logging_interval == 0 or i == total - 1:
+            if update_idx % self.logging_interval == 0:
                 lrl = [param_group['lr'] for param_group in self.optimizer.param_groups]
                 lr = sum(lrl) / len(lrl)
 
