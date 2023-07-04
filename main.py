@@ -4,11 +4,12 @@ import hydra
 import torch
 import wandb
 from omegaconf import DictConfig
+from timm.utils import CheckpointSaver
 
 from src.data import get_dataloader
-from src.fit import Fit
+from src.engine import Engine
 from src.initial_setting import init_seed, init_distributed, init_logger, cuda_setting
-from src.utils import model_tune, logging_benchmark_result_to_wandb, benchmark_model, ObjectFactory, CheckpointSaver
+from src.utils import model_tune, ObjectFactory, logging_benchmark_result_to_wandb
 
 
 @hydra.main(config_path="configs", config_name="config", version_base="1.3")
@@ -29,20 +30,21 @@ def main(cfg: DictConfig) -> None:
     optimizer, scheduler = factory.create_optimizer_and_scheduler(model, len(loaders[0]))
     criterion, scaler = factory.create_criterion_scaler()
 
-    model, model_ema, start_epoch = model_tune(model, optimizer, scaler, scheduler, cfg)
+    model, model_ema, start_epoch, scheduler = model_tune(model, optimizer, scaler, scheduler, cfg)
 
     saver = CheckpointSaver(model=model, optimizer=optimizer, args=cfg, model_ema=model_ema, amp_scaler=scaler,
-                            scheduler=scheduler, max_history=cfg.train.save_max_history)
+                            max_history=cfg.train.save_max_history)
 
-    if cfg.is_master and cfg.wandb and not cfg.train.resume:
-        benchmark_result = benchmark_model(cfg, model)
+    if cfg.do_benchmark and cfg.is_master and cfg.wandb and not cfg.train.resume:
+        from src.utils.benchmark import benchmark_with_model
+        benchmark_result = benchmark_with_model(cfg, model)
         logging_benchmark_result_to_wandb(benchmark_result, cfg.name)
 
     cfg = factory.cfg
     epochs = (start_epoch, cfg.train.epochs)
-    fit = Fit(cfg, scaler, device, epochs, model, criterion, optimizer, model_ema, scheduler, saver, loaders)
+    engine = Engine(cfg, scaler, device, epochs, model, criterion, optimizer, model_ema, scheduler, saver, loaders)
 
-    fit()
+    engine()
 
     if cfg.is_master:
         torch.cuda.empty_cache()

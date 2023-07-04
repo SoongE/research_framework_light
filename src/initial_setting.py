@@ -10,7 +10,7 @@ from src.utils import Logger, print_pass
 
 
 def init_logger(cfg):
-    if cfg.is_master == 0:
+    if cfg.is_master:
         logger = Logger(cfg, cfg.wandb)
         return logger
 
@@ -44,6 +44,8 @@ def cuda_setting(gpus):
         gpus = [gpus]
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(str(e) for e in gpus)
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.benchmark = True
 
 
 def init_seed(seed):
@@ -51,4 +53,3 @@ def init_seed(seed):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.benchmark = True
