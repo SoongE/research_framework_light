@@ -1,13 +1,12 @@
 import timm
 import torch
-from lion_pytorch import Lion
-from timm.optim import Lamb
+from omegaconf import OmegaConf
+from timm.loss import BinaryCrossEntropy, SoftTargetCrossEntropy, LabelSmoothingCrossEntropy
+from timm.optim import create_optimizer_v2, optimizer_kwargs
+from timm.scheduler import create_scheduler_v2, scheduler_kwargs
+from timm.utils import NativeScaler
 from torch import nn
-from torch.cuda.amp import GradScaler
-from torch.nn import BCEWithLogitsLoss, MSELoss
-from torch.optim import SGD, AdamW
-from torch.optim.lr_scheduler import CosineAnnealingLR, StepLR, ExponentialLR, LambdaLR, MultiStepLR, \
-    OneCycleLR, SequentialLR
+from torch.nn import BCEWithLogitsLoss
 
 
 class ObjectFactory:
@@ -45,91 +44,46 @@ class ObjectFactory:
         self.cfg.train.iter_per_epoch = iter_per_epoch
         self.train.iter_per_epoch = iter_per_epoch
 
-        optim = self.optim.optim
-        sched = self.scheduler.sched
+        optimizer = create_optimizer_v2(model, **optimizer_kwargs(cfg=self.optim))
 
-        parameter = model.parameters()
-        total_iter = self.train.epochs * self.train.iter_per_epoch
-        warmup_iter = self.scheduler.warmup_epochs * self.train.iter_per_epoch
-        lr = self.optim.lr
-        weight_decay = self.optim.weight_decay
+        updates_per_epoch = \
+            (iter_per_epoch + self.optim.grad_accumulation - 1) // self.optim.grad_accumulation
 
-        if optim == 'sgd':
-            optimizer = SGD(parameter, lr, self.optim.momentum, weight_decay=weight_decay, nesterov=self.optim.nesterov)
-        elif optim == 'adamw':
-            optimizer = AdamW(parameter, lr, weight_decay=weight_decay, betas=self.optim.betas, eps=self.optim.eps)
-        elif optim == 'lion':
-            optimizer = Lion(parameter, lr, weight_decay=weight_decay)
-        elif optim == 'lamb':
-            optimizer = Lamb(parameter, lr, weight_decay=weight_decay, betas=self.optim.betas, eps=self.optim.eps)
-        else:
-            NotImplementedError(f"{optim} is not supported yet")
-
-        if sched == 'cosine':
-            scheduler = CosineAnnealingLR(optimizer, total_iter - warmup_iter, self.scheduler.min_lr)
-        elif sched == 'multistep':
-            scheduler = MultiStepLR(optimizer, [epoch * iter_per_epoch for epoch in self.scheduler.milestones])
-        elif sched == 'step':
-            scheduler = StepLR(optimizer, total_iter - warmup_iter, gamma=self.scheduler.decay_rate)
-        elif sched == 'explr':
-            scheduler = ExponentialLR(optimizer, gamma=self.scheduler.decay_rate)
-        elif sched == 'onecyclelr':
-            scheduler = OneCycleLR(optimizer, lr, total_iter)
-        else:
-            NotImplementedError(f"{sched} is not supported yet")
-
-        if self.scheduler.warmup_epochs and sched != 'onecyclelr':
-            if self.scheduler.warmup_scheduler == 'linear':
-                lr_lambda = lambda e: (e * (
-                        lr - self.scheduler.warmup_lr) / warmup_iter + self.scheduler.warmup_lr) / lr
-                warmup_scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
-            else:
-                NotImplementedError(f"{self.scheduler.warmup_scheduler} is not supported yet")
-
-            scheduler = SequentialLR(optimizer, [warmup_scheduler, scheduler], [warmup_iter])
-
+        OmegaConf.set_struct(self.scheduler, False)
+        self.scheduler.epochs = self.train.epochs
+        scheduler, num_epochs = create_scheduler_v2(
+            optimizer,
+            **scheduler_kwargs(self.scheduler),
+            updates_per_epoch=updates_per_epoch,
+        )
         return optimizer, scheduler
 
     def create_criterion_scaler(self):
-        if self.train.criterion in ['ce', 'crossentropy']:
-            criterion = nn.CrossEntropyLoss()
-        elif self.train.criterion in ['bce', 'binarycrossentropy']:
-            criterion = BCEWithLogitsLossWithTypeCasting()
-        elif self.train.criterion in ['ml']:
-            criterion = nn.MultiLabelSoftMarginLoss()
-        elif self.train.criterion in ['mse', 'l2']:
-            criterion = MSELoss()
+        if self.dataset.augmentation.cutmix > 0 or self.dataset.augmentation.cutmix > 0:  # mixup activate
+            # smoothing is handled with mixup target transform which outputs sparse, soft targets
+            if self.train.bce_loss:
+                train_loss_fn = BinaryCrossEntropy(target_threshold=self.train.bce_target_thresh)
+            else:
+                train_loss_fn = SoftTargetCrossEntropy()
+
+        elif self.dataset.augmentation.smoothing > 0:
+            if self.train.bce_loss:
+                train_loss_fn = BinaryCrossEntropy(smoothing=self.dataset.augmentation.smoothing,
+                                                   target_threshold=self.train.bce_target_thresh)
+            else:
+                train_loss_fn = LabelSmoothingCrossEntropy(smoothing=self.dataset.augmentation.smoothing)
+
         else:
-            NotImplementedError(f"{self.train.criterion} is not supported yet")
+            train_loss_fn = nn.CrossEntropyLoss()
+        train_loss_fn = train_loss_fn.to(device=self.device)
+        validate_loss_fn = nn.CrossEntropyLoss().to(device=self.device)
 
         if self.train.amp:
-            scaler = NativeScalerWithGradAccum()
+            scaler = NativeScaler()
         else:
             scaler = None
 
-        return criterion, scaler
-
-
-class NativeScalerWithGradAccum:
-    state_dict_key = "amp_scaler"
-
-    def __init__(self):
-        self._scaler = GradScaler()
-
-    def __call__(self, loss, optimizer, model_param, clip_grad=None, update=True):
-        self._scaler.scale(loss).backward()
-        if update:
-            if clip_grad:
-                self._scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(model_param, clip_grad)
-            self._scaler.step(optimizer)
-            self._scaler.update()
-
-    def state_dict(self):
-        return self._scaler.state_dict()
-
-    def load_state_dict(self, state_dict):
-        self._scaler.load_state_dict(state_dict)
+        return (train_loss_fn, validate_loss_fn), scaler
 
 
 class BCEWithLogitsLossWithTypeCasting(BCEWithLogitsLoss):

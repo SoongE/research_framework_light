@@ -16,6 +16,7 @@ from timm.utils import get_state_dict, unwrap_model
 _logger = logging.getLogger(__name__)
 
 
+# deprecated
 class CheckpointSaver:
     def __init__(
             self,
