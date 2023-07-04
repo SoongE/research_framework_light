@@ -87,6 +87,7 @@ class MixUP:
     def __call__(self, batch, target):
         if self.p > random.random():
             return batch, target
+
         if target.ndim == 1:
             target = F.one_hot(target, num_classes=self.nclass).to(dtype=batch.dtype)
 
@@ -135,6 +136,7 @@ class CutMix:
 
         batch[:, :, start_x:end_x, start_y:end_y] = batch_roll[:, :, start_x:end_x, start_y:end_y]
         target = target * (1 - ratio) + target_roll * ratio
+
         return batch, target
 
 
