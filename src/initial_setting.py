@@ -39,6 +39,7 @@ def init_distributed(cfg):
 
         cfg.is_master = cfg.local_rank == 0
 
+
 def cuda_setting(gpus):
     if isinstance(gpus, int):
         gpus = [gpus]
@@ -53,3 +54,4 @@ def init_seed(seed):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
+    # torch.backends.cudnn.deterministic = True # If deterministic = True, training time will be increased.
