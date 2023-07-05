@@ -1,6 +1,7 @@
-from timm.data import create_dataset, FastCollateMixup, Mixup, AugMixDataset, create_loader
+from timm.data import create_dataset, FastCollateMixup, Mixup, AugMixDataset
 
 from src.data import get_cifar_dataloader
+from src.data.create_loader2 import create_loader_v2
 
 
 def base_dataloader(cfg):
@@ -33,7 +34,7 @@ def base_dataloader(cfg):
     # wrap dataset in AugMix helper
     if aug.aug_splits > 1:
         dataset_train = AugMixDataset(dataset_train, num_splits=cfg.aug_splits)
-    loader_train = create_loader(
+    loader_train = create_loader_v2(
         dataset_train,
         input_size=tuple(dataset.size),
         batch_size=cfg.train.batch_size,
@@ -63,7 +64,7 @@ def base_dataloader(cfg):
         worker_seeding=aug.worker_seeding,
     )
 
-    loader_eval = create_loader(
+    loader_eval = create_loader_v2(
         dataset_eval,
         input_size=tuple(dataset.size),
         batch_size=cfg.train.batch_size,
