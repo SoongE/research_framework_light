@@ -1,5 +1,5 @@
 defaults:
-  - lr_scheduler: consine
+  - lr_scheduler: cosine
   - optimizer: adamw
 
 epochs: 100

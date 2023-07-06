@@ -3,12 +3,12 @@ defaults:
   - override train/optimizer: lamb
   - _self_
 
-gpus: [ 0,1 ]
+gpus: [ 0,1,2,3 ]
 name: a3_resnet50
 
 train:
   epochs: 100
-  batch_size: 224
+  batch_size: 128
   num_workers: 8
   bce_loss: True
   target_thresh: 0.2
@@ -19,18 +19,19 @@ train:
     min_lr: 1e-6
 
   optimizer:
+    lr: 8e-3
     grad_accumulation: 4
 
 model:
   model_name: resnet50
-  drop_path_rate: 0.05
+  drop_path_rate: 0.0
 
 dataset:
   augmentation:
     mixup: 0.1
     cumix: 1.0
     crop_pct: 0.95
-    aa: rand-m7-mstd0.5-inc1
+    aa: rand-m6-mstd0.5-inc1
     aug_repeat: 3
     remode: pixel
     smoothing: 0.0
