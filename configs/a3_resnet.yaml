@@ -32,6 +32,5 @@ dataset:
     cumix: 1.0
     crop_pct: 0.95
     aa: rand-m6-mstd0.5-inc1
-    aug_repeat: 3
     remode: pixel
     smoothing: 0.0
