@@ -10,7 +10,7 @@ from src.data import get_dataloader
 from src.engine import Engine
 from src.initial_setting import init_seed, init_distributed, init_logger, cuda_setting
 from src.utils import model_tune, ObjectFactory, logging_benchmark_result_to_wandb
-
+import src.models
 
 @hydra.main(config_path="configs", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
@@ -24,8 +24,8 @@ def main(cfg: DictConfig) -> None:
     init_logger(cfg)
 
     loaders = get_dataloader(cfg)
-    factory = ObjectFactory(cfg)
 
+    factory = ObjectFactory(cfg)
     model = factory.create_model()
     optimizer, scheduler = factory.create_optimizer_and_scheduler(model, len(loaders[0]))
     criterion, scaler = factory.create_criterion_scaler()

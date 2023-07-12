@@ -5,27 +5,27 @@ defaults:
   - override dataset: cifar100
   - _self_
 
-gpus: [ 0,1,2,3 ]
+gpus: [ 6 ]
 name: ${dataset.name}_${model.model_name}
 
 train:
-  epochs: 50
-  batch_size: 128
+  epochs: 100
+  batch_size: 256
   num_workers: 2
   bce_loss: False
   target_thresh: 0.0
 
   lr_scheduler:
-    warmup_epochs: 0
-    warmup_lr: 1e-5
+    warmup_epochs: 5
+    warmup_lr: 1e-4
     min_lr: 1e-6
 
   optimizer:
-    grad_accumulation: 2
     lr: 3.5e-3
+    weight_decay: 1e-3
 
 model:
-  model_name: resnet50
+  model_name: resnet50_cifar
   drop_path_rate: 0.1
 
 dataset:
