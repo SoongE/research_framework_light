@@ -220,7 +220,6 @@ class Engine:
 
         for metric in self.eval_metrics:
             metric_fn[metric] = torchmetrics.__dict__[metric](task=task, threshold=threshold, num_classes=num_class,
-                                                              compute_on_step=False,
                                                               average='macro' if metric == 'AUROC' else average,
                                                               num_labels=num_label, top_k=top_k).to(self.device)
         return metric_fn
