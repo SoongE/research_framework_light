@@ -17,6 +17,10 @@ train:
     warmup_epochs: 5
     warmup_lr: 1e-4
     min_lr: 1e-6
+  
+  optimizer:
+    grad_accumulation: 2
+
 
 model:
   model_name: resnet50
