@@ -6,7 +6,7 @@ defaults:
   - model: base_model
   - benchmark: benchmark
 
-name: ${dataset.dataset_name}_${model.model_name}
+name: ${dataset.name}_${model.model_name}
 
 gpus: [ 0,1 ]
 wandb: True
@@ -20,7 +20,7 @@ torchcompile: False
 
 hydra:
   run:
-    dir: runs/${dataset.dataset_name}_${model.model_name}/${name}_${now:%Y%m%d-%H%M%S}/
+    dir: runs/${dataset.name}_${model.model_name}/${name}_${now:%Y%m%d-%H%M%S}/
   job:
     chdir: True
   job_logging:

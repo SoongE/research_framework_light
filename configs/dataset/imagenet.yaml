@@ -1,8 +1,8 @@
 defaults:
   - augmentation: base_augmentation
 
-dataset_name: imageNet
 name: imageNet
+dataset_name: imageNet
 root: /data/imageNet
 task: multiclass
 

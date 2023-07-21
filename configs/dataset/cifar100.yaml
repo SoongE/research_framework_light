@@ -1,8 +1,8 @@
 defaults:
   - augmentation: base_augmentation
 
-dataset_name: cifar100
-name: torch/cifar100
+name: cifar100
+dataset_name: torch/cifar100
 root: /data/cifar
 task: multiclass
 

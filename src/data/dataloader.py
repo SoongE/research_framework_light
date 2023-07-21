@@ -9,12 +9,12 @@ def base_dataloader(cfg):
     dataset = cfg.dataset
 
     dataset_train = create_dataset(
-        dataset.name, root=dataset.root, split=dataset.train, is_training=True,
+        dataset.dataset_name, root=dataset.root, split=dataset.train, is_training=True,
         class_map=dataset.class_map,
         batch_size=cfg.train.batch_size,
         repeats=aug.epoch_repeats)
     dataset_eval = create_dataset(
-        dataset.name, root=dataset.root, split=dataset.valid, is_training=False,
+        dataset.dataset_name, root=dataset.root, split=dataset.valid, is_training=False,
         class_map=dataset.class_map,
         batch_size=cfg.train.batch_size)
 
