@@ -1,6 +1,6 @@
 from timm.data import create_dataset, FastCollateMixup, Mixup, AugMixDataset
+from torchvision.transforms import transforms
 
-from src.data import get_cifar_dataloader
 from src.data.create_loader2 import create_loader_v2
 
 
@@ -82,6 +82,10 @@ def base_dataloader(cfg):
 
 
 def get_dataloader(cfg):
+    dl_train, dl_eval = base_dataloader(cfg)
     if 'cifar' in cfg.dataset.name:
-        return get_cifar_dataloader(cfg)
+        dl_train.dataset.transform.transforms[0] = transforms.RandomCrop(cfg.dataset.size[1],
+                                                                         padding=int(cfg.dataset.size[1] // 8))
+        dl_eval.dataset.transform.transforms[0] = transforms.Resize(cfg.dataset.size[1])
+        dl_eval.dataset.transform.transforms[1] = transforms.Lambda(lambda x: x)
     return base_dataloader(cfg)
