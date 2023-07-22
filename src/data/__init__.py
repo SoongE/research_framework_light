@@ -1,2 +1,2 @@
-from .cifar_dataloader import get_cifar_dataloader
+from .cifar_transforms import create_transform_cifar
 from .dataloader import get_dataloader
