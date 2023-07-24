@@ -8,3 +8,4 @@ patience_epochs: 10
 decay_rate: 0.1
 min_lr: 0.
 warmup_lr: 1e-5
+sched_on_update: False
