@@ -1,8 +1,9 @@
-import warnings
+import logging
 
-from src.data.creat_loader_v2 import create_loader_v2
 from timm.data import create_dataset, FastCollateMixup, Mixup, AugMixDataset, str_to_interp_mode
 from torchvision import transforms
+
+from src.data.creat_loader_v2 import create_loader_v2
 
 
 def base_dataloader(cfg):
@@ -91,7 +92,8 @@ def get_dataloader(cfg):
 
         if cfg.dataset.augmentation.autoaug:
             if cfg.dataset.augmentation.aa:
-                warnings.warn('RandAug of timm is replaced by AutoAug of torchvision.', UserWarning)
+                logging.warning(f'Timm\' RandAug is replaced by torchvision\'s AutoAug. '
+                                f'Check CIFAR configs of data.augmentation. Now "aa" is {cfg.dataset.augmentation.aa}')
             loader_train.dataset.transform.transforms[2] = transforms.AutoAugment(
                 transforms.AutoAugmentPolicy.CIFAR10, str_to_interp_mode(cfg.dataset.augmentation.train_interpolation))
 
