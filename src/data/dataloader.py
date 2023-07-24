@@ -3,7 +3,7 @@ import logging
 from timm.data import create_dataset, FastCollateMixup, Mixup, AugMixDataset, str_to_interp_mode
 from torchvision import transforms
 
-from src.data.creat_loader_v2 import create_loader_v2
+from src.data import create_loader_v2
 
 
 def base_dataloader(cfg):
