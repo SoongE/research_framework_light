@@ -27,7 +27,7 @@ def main(cfg: DictConfig) -> None:
 
     factory = ObjectFactory(cfg)
     model = factory.create_model()
-    optimizer, scheduler = factory.create_optimizer_and_scheduler(model, len(loaders[0]))
+    optimizer, scheduler, n_epochs = factory.create_optimizer_and_scheduler(model, len(loaders[0]))
     criterion, scaler = factory.create_criterion_scaler()
 
     model, model_ema, start_epoch, scheduler = model_tune(model, optimizer, scaler, scheduler, cfg)
@@ -41,7 +41,7 @@ def main(cfg: DictConfig) -> None:
         logging_benchmark_result_to_wandb(benchmark_result, cfg.name)
 
     cfg = factory.cfg
-    epochs = (start_epoch, cfg.train.epochs)
+    epochs = (start_epoch, n_epochs)
     engine = Engine(cfg, scaler, device, epochs, model, criterion, optimizer, model_ema, scheduler, saver, loaders)
 
     engine()

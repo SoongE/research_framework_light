@@ -56,7 +56,7 @@ class ObjectFactory:
             **scheduler_kwargs(self.scheduler),
             updates_per_epoch=updates_per_epoch,
         )
-        return optimizer, scheduler
+        return optimizer, scheduler, num_epochs
 
     def create_criterion_scaler(self):
         if self.dataset.augmentation.cutmix > 0 or self.dataset.augmentation.cutmix > 0:  # mixup activate
