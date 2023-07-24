@@ -95,12 +95,13 @@ class Engine:
         total = len(self.train_loader)
         accum_steps = self.grad_accumulation
         num_updates = epoch * (updates_per_epoch := (total + accum_steps - 1) // accum_steps)
+        last_batch_idx = total-1
         last_batch_idx_to_accum = total - (last_accum_steps := total % accum_steps)
 
         self.model.train()
         self.optimizer.zero_grad()
         for i, data in enumerate(self.train_loader):
-            update_grad = i == total - 1 or (i + 1) % accum_steps == 0
+            update_grad = (i == last_batch_idx) or (i + 1) % accum_steps == 0
             update_idx = i // accum_steps
             accum_steps = last_accum_steps if i >= last_batch_idx_to_accum else accum_steps
 
