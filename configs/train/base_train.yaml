@@ -7,8 +7,8 @@ iter_per_epoch:
 batch_size: 256
 num_workers: 8
 seed: 0
-target_metric: Accuracy
-eval_metrics: [ 'Accuracy', 'F1Score', 'Specificity', 'Recall', 'Precision', 'AUROC' ] #, 'ConfusionMatrix' ]
+target_metric: Top1
+eval_metrics: [ Top1, Top5, F1Score, Specificity, Recall, Precision, AUROC ] #, ConfusionMatrix ]
 
 criterion: crossentropy
 bce_loss: False
