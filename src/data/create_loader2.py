@@ -13,14 +13,11 @@ from typing import Callable
 
 import numpy as np
 import torch.utils.data
-import torchvision.datasets
 from timm.data import create_transform
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.data.distributed_sampler import OrderedDistributedSampler, RepeatAugSampler
 from timm.data.mixup import FastCollateMixup
 from timm.data.random_erasing import RandomErasing
-
-from . import create_transform_cifar
 
 
 def fast_collate(batch):
@@ -202,10 +199,7 @@ def create_loader_v2(
     if re_split:
         # apply RE to second half of batch if no aug split otherwise line up with aug split
         re_num_splits = num_aug_splits or 2
-    transform_fn = create_transform_cifar if isinstance(dataset, (
-        torchvision.datasets.CIFAR10, torchvision.datasets.CIFAR100)) else create_transform
-
-    dataset.transform = transform_fn(
+    dataset.transform = create_transform(
         input_size,
         is_training=is_training,
         use_prefetcher=use_prefetcher,

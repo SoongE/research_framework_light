@@ -1,6 +1,8 @@
-from timm.data import create_dataset, FastCollateMixup, Mixup, AugMixDataset
+import warnings
 
-from src.data.create_loader2 import create_loader_v2
+from src.data.creat_loader_v2 import create_loader_v2
+from timm.data import create_dataset, FastCollateMixup, Mixup, AugMixDataset, str_to_interp_mode
+from torchvision import transforms
 
 
 def base_dataloader(cfg):
@@ -77,8 +79,23 @@ def base_dataloader(cfg):
         crop_pct=aug.crop_pct,
         pin_memory=aug.pin_mem,
     )
-    return (loader_train, loader_eval)
+    return loader_train, loader_eval
 
 
 def get_dataloader(cfg):
-    return base_dataloader(cfg)
+    loader_train, loader_eval = base_dataloader(cfg)
+
+    if 'cifar' in cfg.dataset.dataset_name:
+        size = cfg.dataset.size[1]
+        loader_train.dataset.transform.transforms[0] = transforms.RandomCrop(size, padding=size // 8)
+
+        if cfg.dataset.augmentation.autoaug:
+            if cfg.dataset.augmentation.aa:
+                warnings.warn('RandAug of timm is replaced by AutoAug of torchvision.', UserWarning)
+            loader_train.dataset.transform.transforms[2] = transforms.AutoAugment(
+                transforms.AutoAugmentPolicy.CIFAR10, str_to_interp_mode(cfg.dataset.augmentation.train_interpolation))
+
+        loader_eval.dataset.transform.transforms[0] = transforms.Resize(size)
+        loader_eval.dataset.transform.transforms[1] = transforms.Lambda(lambda x: x)
+
+    return loader_train, loader_eval
