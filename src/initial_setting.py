@@ -50,8 +50,7 @@ def cuda_setting(gpus):
 
 
 def init_seed(seed):
-    random.seed(seed)
-    np.random.seed(seed)
     torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
     # torch.backends.cudnn.deterministic = True # If deterministic = True, training time will be increased.
