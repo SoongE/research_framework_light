@@ -15,9 +15,11 @@ import numpy as np
 import torch.utils.data
 from timm.data import create_transform
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
-from timm.data.distributed_sampler import OrderedDistributedSampler, RepeatAugSampler
+from timm.data.distributed_sampler import RepeatAugSampler, OrderedDistributedSampler
 from timm.data.mixup import FastCollateMixup
 from timm.data.random_erasing import RandomErasing
+
+from src.data import DistributedEvalSampler
 
 
 def fast_collate(batch):
@@ -233,6 +235,7 @@ def create_loader_v2(
             # This will add extra duplicate entries to result in equal num
             # of samples per-process, will slightly alter validation results
             sampler = OrderedDistributedSampler(dataset)
+            # sampler = DistributedEvalSampler(dataset) #Todo: Test performance
     else:
         assert num_aug_repeats == 0, "RepeatAugment not currently supported in non-distributed or IterableDataset use"
 
