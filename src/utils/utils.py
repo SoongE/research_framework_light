@@ -44,7 +44,11 @@ def logging_benchmark_result_to_wandb(benchmark_result, exp_name):
 def resume_checkpoint(model, checkpoint_path, optimizer=None, loss_scaler=None, scheduler=None, log_info=True):
     resume_epoch = None
     base_path = hydra.utils.get_original_cwd()
-    checkpoint_path = os.path.join(base_path, checkpoint_path, 'last.pth.tar')
+
+    if checkpoint_path.endswith('pth.tar'):
+        checkpoint_path = os.path.join(base_path, checkpoint_path)
+    else:
+        checkpoint_path = os.path.join(base_path, checkpoint_path, 'last.pth.tar')
 
     if os.path.isfile(checkpoint_path):
         checkpoint = torch.load(checkpoint_path, map_location='cpu')
