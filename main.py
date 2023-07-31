@@ -10,7 +10,7 @@ from src.data import get_dataloader
 from src.engine import Engine
 from src.initial_setting import init_seed, init_distributed, init_logger, cuda_setting
 from src.utils import model_tune, ObjectFactory, logging_benchmark_result_to_wandb
-import src.models
+
 
 @hydra.main(config_path="configs", config_name="config", version_base="1.3")
 def main(cfg: DictConfig) -> None:
@@ -21,8 +21,6 @@ def main(cfg: DictConfig) -> None:
     device = torch.device(f'cuda:{cfg.local_rank}') if torch.cuda.is_available() else torch.device('cpu')
     cfg.name = cfg.model.model_name if cfg.name == '' else cfg.name
 
-    init_logger(cfg)
-
     loaders = get_dataloader(cfg)
 
     factory = ObjectFactory(cfg)
@@ -32,16 +30,18 @@ def main(cfg: DictConfig) -> None:
 
     model, model_ema, start_epoch, scheduler = model_tune(model, optimizer, scaler, scheduler, cfg)
 
-    saver = CheckpointSaver(model=model, optimizer=optimizer, args=cfg, model_ema=model_ema, amp_scaler=scaler,
-                            max_history=cfg.train.save_max_history)
+    cfg = factory.cfg
+    init_logger(cfg)
 
     if cfg.do_benchmark and cfg.is_master and cfg.wandb and not cfg.train.resume:
         from src.utils.benchmark import benchmark_with_model
         benchmark_result = benchmark_with_model(cfg, model)
         logging_benchmark_result_to_wandb(benchmark_result, cfg.name)
 
-    cfg = factory.cfg
+    saver = CheckpointSaver(model=model, optimizer=optimizer, args=cfg, model_ema=model_ema, amp_scaler=scaler,
+                            max_history=cfg.train.save_max_history)
     epochs = (start_epoch, n_epochs)
+
     engine = Engine(cfg, scaler, device, epochs, model, criterion, optimizer, model_ema, scheduler, saver, loaders)
 
     engine()
