@@ -44,7 +44,7 @@ class ObjectFactory:
         self.cfg.train.iter_per_epoch = iter_per_epoch
         self.train.iter_per_epoch = iter_per_epoch
 
-        optimizer = create_optimizer_v2(model.parameters(), **optimizer_kwargs(cfg=self.optim))
+        optimizer = create_optimizer_v2(model, **optimizer_kwargs(cfg=self.optim))
 
         updates_per_epoch = \
             (iter_per_epoch + self.optim.grad_accumulation - 1) // self.optim.grad_accumulation
