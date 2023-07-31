@@ -44,7 +44,7 @@ class Engine:
             self.train_loader = loader[0]
             self.val_loader = loader[1]
 
-        self.losses = MeanMetric(compute_on_step=False).to(self.device)
+        self.losses = MeanMetric().to(self.device)
         self.metric_fn = self.init_metrics(cfg.dataset.task, 0.5, cfg.dataset.num_classes, cfg.dataset.num_classes,
                                            'macro')
 
@@ -201,10 +201,7 @@ class Engine:
             fn.reset()
 
     def _metrics(self):
-        result = dict()
-        result['loss'] = self.losses.compute().tolist()
-        for k, fn in self.metric_fn.items():
-            result[k] = fn.compute().tolist()
+        result = {'loss': self.losses.compute(), **self.metric_fn.compute()}
         return result
 
     @staticmethod
@@ -213,19 +210,29 @@ class Engine:
         if "ConfusionMatrix" in metrics:
             metrics.pop('ConfusionMatrix')
         for k, v in metrics.items():
-            log += f'{k}:{v:.6f} | '
+            log += f'{k}:{v.item():.4f} | '
         return log[:-3]
 
     def init_metrics(self, task, threshold, num_class, num_label, average, top_k=1):
-        metric_fn = dict()
+        if self.eval_metrics == 'all':
+            self.eval_metrics = ['Top1', 'Top5', 'F1Score', 'Specificity', 'Recall', 'Precision', 'AUROC',
+                                 'ConfusionMatrix']
 
+        metric_fn = dict()
         for metric in self.eval_metrics:
-            if metric in ['Top1', 'Top5']:
+            if metric in ['Top1', 'Top5', 'Accuracy']:
                 metric_fn[metric] = torchmetrics.__dict__['Accuracy'](task=task, threshold=threshold, average='micro',
                                                                       num_classes=num_class, num_labels=num_label,
-                                                                      top_k=int(metric[-1])).to(self.device)
+                                                                      top_k=int(metric[-1]))
+            elif metric in ['AUROC']:
+                metric_fn[metric] = torchmetrics.__dict__['AUROC'](task=task, num_classes=num_class,
+                                                                   num_labels=num_label, average='macro')
+            elif metric in ['ConfusionMatrix']:
+                metric_fn[metric] = torchmetrics.__dict__['ConfusionMatrix'](task=task, num_classes=num_class,
+                                                                             num_labels=num_label)
             else:
                 metric_fn[metric] = torchmetrics.__dict__[metric](task=task, threshold=threshold, num_classes=num_class,
-                                                                  average='macro' if metric == 'AUROC' else average,
-                                                                  num_labels=num_label, top_k=top_k).to(self.device)
+                                                                  average=average, num_labels=num_label, top_k=top_k)
+
+        metric_fn = torchmetrics.MetricCollection(metric_fn).to(self.device)
         return metric_fn
