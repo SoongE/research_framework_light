@@ -8,12 +8,13 @@ defaults:
 
 name: ${dataset.name}_${model.model_name}
 
-gpus: [ 0,1 ]
+gpus: 0
 wandb: True
 distributed: False
 local_rank: 0
 world_size: 1
 port: 3456
+
 is_master: True
 do_benchmark: False
 torchcompile: False
