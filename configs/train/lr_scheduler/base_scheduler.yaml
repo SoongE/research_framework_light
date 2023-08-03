@@ -3,7 +3,7 @@ sched: ???
 decay_epochs: 30
 decay_milestones: [ 30, 60 ]
 warmup_epochs: 5
-cooldown_epochs: 0
+cooldown_epochs: 10
 patience_epochs: 10
 decay_rate: 0.1
 min_lr: 0.
