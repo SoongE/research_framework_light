@@ -1,6 +1,6 @@
 defaults:
   - config
-  - override train/optimizer: lamb
+  - override train/optimizer: sgd
   - override train/lr_scheduler: cosine
   - override dataset: cifar100
   - _self_
@@ -11,25 +11,25 @@ name: ${dataset.name}_${model.model_name}
 train:
   epochs: 100
   batch_size: 256
-  num_workers: 2
+  num_workers: 4
   bce_loss: False
   target_thresh: 0.0
 
   lr_scheduler:
     warmup_epochs: 5
     warmup_lr: 1e-4
-    min_lr: 1e-6
+    min_lr: 1e-4
 
   optimizer:
-    lr: 3.5e-3
-    weight_decay: 1e-3
+    opt: sgd
+    lr: 0.25
+    weight_decay: 1e-4
 
 model:
   model_name: resnet50_cifar
-  drop_path_rate: 0.1
+  drop_path_rate: 0.0
 
 dataset:
   augmentation:
-    cutmix: 0.0
-    mixup: 0.0
-    smoothing: 0.1
+    cutmix: 1.0
+    color_jitter: 0.4
