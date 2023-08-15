@@ -1,6 +1,7 @@
 import timm
 import torch
 from omegaconf import OmegaConf
+from termcolor import colored
 from timm.loss import BinaryCrossEntropy, SoftTargetCrossEntropy, LabelSmoothingCrossEntropy
 from timm.optim import create_optimizer_v2, optimizer_kwargs
 from timm.scheduler import create_scheduler_v2, scheduler_kwargs
@@ -43,6 +44,7 @@ class ObjectFactory:
     def create_optimizer_and_scheduler(self, model, iter_per_epoch):
         self.cfg.train.iter_per_epoch = iter_per_epoch
         self.train.iter_per_epoch = iter_per_epoch
+        self.check_total_batch_size()
 
         optimizer = create_optimizer_v2(model, **optimizer_kwargs(cfg=self.optim))
 
@@ -84,6 +86,21 @@ class ObjectFactory:
             scaler = None
 
         return (train_loss_fn, validate_loss_fn), scaler
+
+    def check_total_batch_size(self):
+        total_batch = self.train.total_batch
+        grad_accum = self.optim.grad_accumulation
+        if total_batch is None:
+            return
+        elif grad_accum is not None:
+            _total_batch = self.cfg.world_size * self.train.batch_size * grad_accum
+            if total_batch != _total_batch:
+                print(f'{colored("[WARNING]", "red")} Total batch size({total_batch}) is unequal to {_total_batch}.')
+
+        self.cfg.train.optimizer.grad_accumulation = total_batch // (self.cfg.world_size * self.train.batch_size)
+        self.optim.grad_accumulation = self.cfg.train.optimizer.grad_accumulation
+        print(f'Set to: GradAccumulation {self.optim.grad_accumulation} / '
+              f'BatchSize: {self.train.batch_size} / WorldSize {self.cfg.world_size}')
 
 
 class BCEWithLogitsLossWithTypeCasting(BCEWithLogitsLoss):

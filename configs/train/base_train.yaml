@@ -5,6 +5,7 @@ defaults:
 epochs: 100
 iter_per_epoch:
 batch_size: 256
+total_batch: 4096
 num_workers: 8
 seed: 0
 target_metric: Top1
