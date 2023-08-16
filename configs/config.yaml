@@ -4,7 +4,6 @@ defaults:
   - dataset: imagenet
   - info: info
   - model: base_model
-  - benchmark: benchmark
 
 name: ${dataset.name}_${model.model_name}
 
@@ -16,7 +15,6 @@ world_size: 1
 port: 3456
 
 is_master: True
-do_benchmark: False
 torchcompile: False
 
 hydra:

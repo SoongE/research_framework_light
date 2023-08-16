@@ -1,31 +1,40 @@
-bench: inference # [inference|train|both|profile|all]
+gpus: 6
+bench: both # [inference|train|both|profile|all]
 detail: False
-no_retry: False
-result_file: benchmark
+
+result_file: benchmark_${now:%Y%m%d-%H%M%S}.csv
 num_warm_iter: 10
 num_bench_iter: 40
 
 model:
-model_list:
 batch_size: 256
 input_size: [ 3,224,224 ]
 use_train_size: False
 num_classes: 1000
 channels_last: True
 amp: True
-amp_dtype: float16
-
-precision: float32
-fuser: # te, old, nvfuser
+precision: amp
 torchscript: False
-aot_autograd: False
-fast_norm: False
-grad_checkpointing: False
+
+opt: sgd
+opt_eps:
+opt_betas:
+momentum: 0.9
+weight_decay: 0.0001
+clip_grad:
+clip_mode:
+
+smoothing: 0.1
+drop: 0.0
+drop_path:
+drop_block:
+distill_token:
 
 hydra:
   run:
-    dir: benchmark_model/${model.model_name}_${now:%Y%m%d-%H%M%S}/
-
+    dir: benchmark
+  job:
+    chdir: True
   job_logging:
     version: 1
     formatters:
