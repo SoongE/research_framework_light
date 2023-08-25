@@ -191,7 +191,7 @@ class Engine:
             self.optimizer.step()
 
     def _update_metric(self, loss, prob, target):
-        self.losses.update(loss.item() / prob.size(0))
+        self.losses.update(loss.item())
         for fn in self.metric_fn.values():
             fn.update(prob, target)
 
