@@ -95,12 +95,11 @@ class ObjectFactory:
         elif grad_accum is not None:
             _total_batch = self.cfg.world_size * self.train.batch_size * grad_accum
             if total_batch != _total_batch:
-                print(f'{colored("[WARNING]", "red")} Total batch size({total_batch}) is unequal to {_total_batch}.')
+                print(f'{colored("[NOTICE]", "yellow")} Total batch size({total_batch}) is unequal to {_total_batch}.')
 
         self.cfg.train.optimizer.grad_accumulation = total_batch // (self.cfg.world_size * self.train.batch_size)
         self.optim.grad_accumulation = self.cfg.train.optimizer.grad_accumulation
-        print(f'Set to: GradAccumulation {self.optim.grad_accumulation} / '
-              f'BatchSize: {self.train.batch_size} / WorldSize {self.cfg.world_size}')
+        print(f'{colored("Set to: GradAccumulation {self.optim.grad_accumulation} / BatchSize {self.train.batch_size} / WorldSize {self.cfg.world_size}", "yellow")}')
 
 
 class BCEWithLogitsLossWithTypeCasting(BCEWithLogitsLoss):
