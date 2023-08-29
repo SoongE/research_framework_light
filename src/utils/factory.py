@@ -99,7 +99,7 @@ class ObjectFactory:
 
         self.cfg.train.optimizer.grad_accumulation = total_batch // (self.cfg.world_size * self.train.batch_size)
         self.optim.grad_accumulation = self.cfg.train.optimizer.grad_accumulation
-        print(f'{colored("Set to: GradAccumulation {self.optim.grad_accumulation} / BatchSize {self.train.batch_size} / WorldSize {self.cfg.world_size}", "yellow")}')
+        print(colored(f'Set to: GradAccumulation {self.optim.grad_accumulation} / BatchSize {self.train.batch_size} / WorldSize {self.cfg.world_size}', 'yellow'))
 
 
 class BCEWithLogitsLossWithTypeCasting(BCEWithLogitsLoss):
