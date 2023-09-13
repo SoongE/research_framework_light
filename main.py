@@ -20,7 +20,6 @@ def main(cfg: DictConfig) -> None:
     init_seed(cfg.train.seed + cfg.local_rank)
 
     device = torch.device(f'cuda:{cfg.local_rank}') if torch.cuda.is_available() else torch.device('cpu')
-    cfg.name = cfg.model.model_name if cfg.name == '' else cfg.name
 
     loaders = get_dataloader(cfg)
 
